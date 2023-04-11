@@ -117,3 +117,7 @@ pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, Strin
         podcast_namespace_chapters,
     ))
 }
+
+pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, String> {
+    Ok(vec![])
+}

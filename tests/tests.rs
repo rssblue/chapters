@@ -86,3 +86,58 @@ fn test_parse_chapters() {
         assert_eq!(result, test.expected);
     }
 }
+
+#[test]
+fn test_chapters_from_description() {
+    struct Test {
+        description: &'static str,
+        expected: Result<Vec<Chapter>, String>,
+    }
+
+    let tests = vec![Test {
+        description: include_str!("data/description.1.txt"),
+        expected: Ok(vec![
+            Chapter {
+                start: chrono::Duration::seconds(0),
+                title: Some(String::from("Intro")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(4) + chrono::Duration::seconds(45),
+                title: Some(String::from("Plot summary")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(10) + chrono::Duration::seconds(11),
+                title: Some(String::from("Sergio Leone")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(16) + chrono::Duration::seconds(58),
+                title: Some(String::from("Ennio Morricone")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(22) + chrono::Duration::seconds(30),
+                title: Some(String::from("Charles Bronson")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(27) + chrono::Duration::seconds(22),
+                title: Some(String::from("Henry Fonda")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(32) + chrono::Duration::seconds(21),
+                title: Some(String::from("Conclusion")),
+                ..Default::default()
+            },
+        ]),
+    }];
+
+    for test in tests {
+        let result = chapters::chapters_from_description(test.description);
+
+        assert_eq!(result, test.expected);
+    }
+}
