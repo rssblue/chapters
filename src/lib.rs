@@ -1,7 +1,7 @@
 #![doc = include_str!("../README.md")]
 
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
-#[derive(Debug, Default)]
+#[derive(Debug, PartialEq)]
 pub struct Chapter {
     /// The starting time of the chapter.
     pub start: chrono::Duration,
@@ -17,4 +17,21 @@ pub struct Chapter {
     pub hidden: bool,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
+}
+
+impl Default for Chapter {
+    fn default() -> Self {
+        Self {
+            start: chrono::Duration::zero(),
+            end: None,
+            title: None,
+            image_url: None,
+            url: None,
+            hidden: false,
+        }
+    }
+}
+
+pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
+    Ok(vec![])
 }
