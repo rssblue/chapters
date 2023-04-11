@@ -1,14 +1,15 @@
 #![doc = include_str!("../README.md")]
 
+use chrono::Duration;
 use serde::Deserialize;
 
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq)]
 pub struct Chapter {
     /// The starting time of the chapter.
-    pub start: chrono::Duration,
+    pub start: Duration,
     /// The end time of the chapter.
-    pub end: Option<chrono::Duration>,
+    pub end: Option<Duration>,
     /// The title of this chapter.
     pub title: Option<String>,
     /// The url of an image to use as chapter art.
@@ -24,7 +25,7 @@ pub struct Chapter {
 impl Default for Chapter {
     fn default() -> Self {
         Self {
-            start: chrono::Duration::zero(),
+            start: Duration::zero(),
             end: None,
             title: None,
             image_url: None,
@@ -46,10 +47,10 @@ struct PodcastNamespaceChapters {
 struct PodcastNamespaceChapter {
     /// The starting time of the chapter.
     #[serde(deserialize_with = "float_to_duration")]
-    pub start_time: chrono::Duration,
+    pub start_time: Duration,
     /// The end time of the chapter.
     #[serde(default, deserialize_with = "float_to_duration_option")]
-    pub end_time: Option<chrono::Duration>,
+    pub end_time: Option<Duration>,
     /// The title of this chapter.
     #[serde(default)]
     pub title: Option<String>,
@@ -66,23 +67,23 @@ struct PodcastNamespaceChapter {
     // pub location: Option<()>,
 }
 
-fn float_to_duration_option<'de, D>(deserializer: D) -> Result<Option<chrono::Duration>, D::Error>
+fn float_to_duration_option<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let f = match Option::<f64>::deserialize(deserializer) {
         Ok(f) => f,
-        Err(e) => return Ok(None),
+        Err(_) => return Ok(None),
     };
-    Ok(f.map(|f| chrono::Duration::seconds(f as i64)))
+    Ok(f.map(|f| Duration::seconds(f as i64)))
 }
 
-fn float_to_duration<'de, D>(deserializer: D) -> Result<chrono::Duration, D::Error>
+fn float_to_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     let f = f64::deserialize(deserializer)?;
-    Ok(chrono::Duration::seconds(f as i64))
+    Ok(Duration::seconds(f as i64))
 }
 
 fn string_to_url<'de, D>(deserializer: D) -> Result<Option<url::Url>, D::Error>
@@ -118,6 +119,110 @@ pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, Strin
     ))
 }
 
+#[derive(Debug, Clone)]
+enum TimestampType {
+    MMSS,
+    HHMMSS,
+    MMSSParentheses,
+    HHMMSSParentheses,
+}
+
+impl TimestampType {
+    fn regex_pattern(&self) -> &str {
+        match self {
+            Self::MMSS => r"(?P<minutes>[0-5][0-9]):(?P<seconds>[0-5][0-9])",
+            Self::HHMMSS => r"(?P<hours>\d{2}):(?P<minutes>[0-5][0-9]):(?P<seconds>[0-5][0-9])",
+            Self::MMSSParentheses => r"\((?P<minutes>[0-5][0-9]):(?P<seconds>[0-5][0-9])\)",
+            Self::HHMMSSParentheses => {
+                r"\((?P<hours>\d{2}):(?P<minutes>[0-5][0-9]):(?P<seconds>[0-5][0-9])\)"
+            }
+        }
+    }
+
+    fn line_regex_pattern(&self) -> String {
+        let pattern = self.regex_pattern().to_owned() + r"[\.!?\\\- ](?P<text>.+)";
+        pattern
+    }
+}
+
 pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, String> {
-    Ok(vec![])
+    let mut chapters = Vec::new();
+    let mut timestamp_type: Option<TimestampType> = None;
+
+    for line in description.lines() {
+        let line = line.trim();
+
+        if timestamp_type.is_none() {
+            // Try to detect a timestamp type.
+            let first_char = match line.chars().next() {
+                Some(c) => c,
+                None => continue,
+            };
+
+            // For efficiency purposes, check first character before trying regexes.
+            if first_char == '(' || first_char.is_numeric() {
+                // Try all regexes.
+                for temp_timestamp_type in vec![
+                    TimestampType::MMSS,
+                    TimestampType::HHMMSS,
+                    TimestampType::MMSSParentheses,
+                    TimestampType::HHMMSSParentheses,
+                ] {
+                    let re = regex::Regex::new(temp_timestamp_type.line_regex_pattern().as_str())
+                        .map_err(|e| e.to_string())?;
+
+                    if re.captures(line).is_some() {
+                        timestamp_type = Some(temp_timestamp_type);
+                    }
+                }
+            }
+        }
+
+        if let Some(timestamp_type) = timestamp_type.clone() {
+            let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
+                .map_err(|e| e.to_string())?;
+
+            match re.captures(line) {
+                Some(captures) => {
+                    let start = parse_timestamp(&captures)?;
+                    let text = captures.name("text").unwrap().as_str();
+                    chapters.push(Chapter {
+                        start,
+                        end: None,
+                        title: Some(text.to_string()),
+                        image_url: None,
+                        url: None,
+                        hidden: false,
+                    });
+                }
+                None => {
+                    println!("No match for line: {}", line);
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(chapters)
+}
+
+fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
+    let hours = match captures.name("hours") {
+        Some(hours) => hours.as_str().parse::<i64>().map_err(|e| e.to_string())?,
+        None => 0,
+    };
+    let minutes = captures
+        .name("minutes")
+        .unwrap()
+        .as_str()
+        .parse::<i64>()
+        .map_err(|e| e.to_string())?;
+    let seconds = captures
+        .name("seconds")
+        .unwrap()
+        .as_str()
+        .parse::<i64>()
+        .map_err(|e| e.to_string())?;
+
+    Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
 }
