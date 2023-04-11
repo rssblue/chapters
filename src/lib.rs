@@ -148,41 +148,34 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
     let mut chapters = Vec::new();
     let mut timestamp_type: Option<TimestampType> = None;
 
-    for line in description.lines() {
-        let line = line.trim();
-
-        if timestamp_type.is_none() {
-            // Try to detect a timestamp type.
-            let first_char = match line.chars().next() {
-                Some(c) => c,
-                None => continue,
-            };
-
-            // For efficiency purposes, check first character before trying regexes.
-            if first_char == '(' || first_char.is_numeric() {
-                // Try all regexes.
-                for temp_timestamp_type in vec![
-                    TimestampType::MMSS,
-                    TimestampType::HHMMSS,
-                    TimestampType::MMSSParentheses,
-                    TimestampType::HHMMSSParentheses,
-                ] {
-                    let re = regex::Regex::new(temp_timestamp_type.line_regex_pattern().as_str())
-                        .map_err(|e| e.to_string())?;
-
-                    if re.captures(line).is_some() {
-                        timestamp_type = Some(temp_timestamp_type);
-                    }
+    for line in description.lines().map(|line| line.trim()) {
+        if let Some(first_char) = line.chars().next() {
+            if timestamp_type.is_none() {
+                // Try to detect a timestamp type.
+                if first_char == '(' || first_char.is_numeric() {
+                    // Try all regexes.
+                    timestamp_type = [
+                        TimestampType::MMSS,
+                        TimestampType::HHMMSS,
+                        TimestampType::MMSSParentheses,
+                        TimestampType::HHMMSSParentheses,
+                    ]
+                    .iter()
+                    .find(|&temp_timestamp_type| {
+                        regex::Regex::new(temp_timestamp_type.line_regex_pattern().as_str())
+                            .map(|re| re.captures(line).is_some())
+                            .unwrap_or(false)
+                    })
+                    .cloned();
                 }
             }
-        }
 
-        if let Some(timestamp_type) = timestamp_type.clone() {
-            let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
-                .map_err(|e| e.to_string())?;
+            if timestamp_type.is_some() {
+                let timestamp_type = timestamp_type.as_ref().unwrap();
+                let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
+                    .map_err(|e| e.to_string())?;
 
-            match re.captures(line) {
-                Some(captures) => {
+                if let Some(captures) = re.captures(line) {
                     let start = parse_timestamp(&captures)?;
                     let text = captures.name("text").unwrap().as_str();
                     chapters.push(Chapter {
@@ -193,9 +186,7 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
                         url: None,
                         hidden: false,
                     });
-                }
-                None => {
-                    println!("No match for line: {}", line);
+                } else {
                     break;
                 }
             }
