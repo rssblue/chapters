@@ -1,7 +1,9 @@
 #![doc = include_str!("../README.md")]
 
 use chrono::Duration;
+use id3::Tag;
 use serde::Deserialize;
+use std::path::Path;
 
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq)]
@@ -222,4 +224,61 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
     let seconds = parse_i64(captures.name("seconds"))?;
 
     Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
+}
+
+/// Reads chapter frames in ID3 tags.
+pub fn chapters_from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
+    let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
+    let mut chapters = Vec::new();
+
+    for frame in tag.frames() {
+        let id3_chapter = match frame.content() {
+            id3::Content::Chapter(chapter) => chapter,
+            _ => {
+                println!("{:?}", frame);
+                continue;
+            }
+        };
+
+        let start = Duration::milliseconds(id3_chapter.start_time as i64);
+
+        let temp_end = Duration::milliseconds(id3_chapter.end_time as i64);
+        // Some programs might encode chapters as instants, i.e., with the start and end time being the same.
+        let end = if temp_end == start {
+            None
+        } else {
+            Some(temp_end)
+        };
+
+        let mut title = None;
+        let mut url = None;
+
+        for subframe in &id3_chapter.frames {
+            match subframe.content() {
+                id3::Content::Text(text) => {
+                    title = Some(text.clone());
+                }
+                id3::Content::Link(link) => {
+                    url = Some(url::Url::parse(link).map_err(|e| e.to_string())?);
+                }
+                id3::Content::ExtendedLink(link) => {
+                    url = Some(url::Url::parse(link.link.as_str()).map_err(|e| e.to_string())?);
+                }
+                _ => {}
+            }
+        }
+
+        chapters.push(Chapter {
+            title,
+            url,
+            start,
+            end,
+            ..Default::default()
+        });
+    }
+
+    // Order chapters by start time.
+    chapters.sort_by(|a, b| a.start.cmp(&b.start));
+
+    Ok(chapters)
 }

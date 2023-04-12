@@ -1,4 +1,5 @@
 use chapters::{parse_chapters, Chapter};
+use pretty_assertions::assert_eq;
 
 #[test]
 fn test_parse_chapters() {
@@ -9,7 +10,7 @@ fn test_parse_chapters() {
 
     let tests = vec![
         Test {
-            file_contents: include_str!("data/chapters.example.json"),
+            file_contents: include_str!("data/podcast-namespace-chapters.github-example.json"),
             expected: Ok(vec![
                 Chapter {
                     start: chrono::Duration::seconds(0),
@@ -74,7 +75,7 @@ fn test_parse_chapters() {
             ]),
         },
         Test {
-            file_contents: include_str!("data/chapters.empty.json"),
+            file_contents: include_str!("data/podcast-namespace-chapters.empty.json"),
             expected: Ok(vec![]),
         },
     ];
@@ -95,7 +96,7 @@ fn test_chapters_from_description() {
     }
 
     let tests = vec![Test {
-        description: include_str!("data/description.1.txt"),
+        description: include_str!("data/description-chapters.txt"),
         expected: Ok(vec![
             Chapter {
                 start: chrono::Duration::seconds(0),
@@ -137,6 +138,59 @@ fn test_chapters_from_description() {
 
     for test in tests {
         let result = chapters::chapters_from_description(test.description);
+
+        assert_eq!(result, test.expected);
+    }
+}
+
+#[test]
+fn test_chapters_from_mp3_file() {
+    struct Test {
+        file_path: &'static str,
+        expected: Result<Vec<Chapter>, String>,
+    }
+
+    let tests = vec![Test {
+        file_path: "tests/data/id3-chapters.jfk-rice-university-speech.mp3",
+        expected: Ok(vec![
+            Chapter {
+                start: chrono::Duration::seconds(0),
+                title: Some(String::from("Introduction")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::seconds(9),
+                title: Some(String::from("Thanks")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::seconds(42),
+                title: Some(String::from("Status quo")),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(5) + chrono::Duration::seconds(8),
+                title: Some(String::from("On being first")),
+                url: Some(url::Url::parse("https://www.osti.gov/opennet/manhattan-project-history/Events/1945/trinity.htm").unwrap()),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(8) + chrono::Duration::seconds(8),
+                title: Some(String::from("Why we're going to the Moon")),
+                url: Some(url::Url::parse("https://www.nasa.gov/mission_pages/apollo/missions/apollo11.html").unwrap()),
+                ..Default::default()
+            },
+            Chapter {
+                start: chrono::Duration::minutes(16) + chrono::Duration::seconds(24),
+                title: Some(String::from("Conclusion")),
+                ..Default::default()
+            },
+        ]),
+    }];
+
+    for test in tests {
+        let path = std::path::Path::new(test.file_path);
+        let result = chapters::chapters_from_mp3_file(path);
 
         assert_eq!(result, test.expected);
     }
