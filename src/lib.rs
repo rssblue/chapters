@@ -134,18 +134,18 @@ enum TimestampType {
 impl TimestampType {
     fn regex_pattern(&self) -> &str {
         match self {
-            Self::MMSS => r"(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
-            Self::HHMMSS => r"(?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
-            Self::MMSSParentheses => r"\((?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)",
+            Self::MMSS => r"^(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
+            Self::HHMMSS => r"^(?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
+            Self::MMSSParentheses => r"^\((?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)",
             Self::HHMMSSParentheses => {
-                r"\((?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)"
+                r"^\((?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)"
             }
         }
     }
 
     fn line_regex_pattern(&self) -> String {
         // Combines the timestamp regex pattern with space (or a punctuation mark) and a pattern for text following the timestamp.
-        format!("{}[.!?\\- ](?P<text>.+)", self.regex_pattern())
+        format!("{}[.!?\\- ](?P<text>.+)$", self.regex_pattern())
     }
 }
 
