@@ -254,7 +254,6 @@ pub fn chapters_from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, S
         let id3_chapter = match frame.content() {
             id3::Content::Chapter(chapter) => chapter,
             _ => {
-                println!("{:?}", frame);
                 continue;
             }
         };
