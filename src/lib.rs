@@ -147,20 +147,15 @@ impl TimestampType {
         // Combines the timestamp regex pattern with space (or a punctuation mark) and a pattern for text following the timestamp.
         format!("{}[.!?\\- ](?P<text>.+)$", self.regex_pattern())
     }
-}
 
-pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, String> {
-    let mut chapters = Vec::new();
-    let mut timestamp_type: Option<TimestampType> = None;
-
-    let detect_timestamp_type = |line: &str| -> Option<TimestampType> {
+    fn from_line(line: &str) -> Option<Self> {
         if let Some(first_char) = line.chars().next() {
             if first_char == '(' || first_char.is_numeric() {
                 return [
-                    TimestampType::MMSS,
-                    TimestampType::HHMMSS,
-                    TimestampType::MMSSParentheses,
-                    TimestampType::HHMMSSParentheses,
+                    Self::MMSS,
+                    Self::HHMMSS,
+                    Self::MMSSParentheses,
+                    Self::HHMMSSParentheses,
                 ]
                 .iter()
                 .find(|&temp_timestamp_type| {
@@ -172,7 +167,12 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
             }
         }
         None
-    };
+    }
+}
+
+pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, String> {
+    let mut chapters = Vec::new();
+    let mut timestamp_type: Option<TimestampType> = None;
 
     let parse_line = |line: &str, timestamp_type: &TimestampType| -> Option<Chapter> {
         let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
@@ -197,7 +197,7 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
 
     for line in description.lines().map(|line| line.trim()) {
         if timestamp_type.is_none() {
-            timestamp_type = detect_timestamp_type(line);
+            timestamp_type = TimestampType::from_line(line);
         }
 
         if let Some(timestamp_type) = timestamp_type.as_ref() {
