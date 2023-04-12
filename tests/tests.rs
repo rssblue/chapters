@@ -1,4 +1,4 @@
-use chapters::{parse_chapters, Chapter};
+use chapters::{parse_chapters, Chapter, Image, Link};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -20,9 +20,9 @@ fn test_parse_chapters() {
                 Chapter {
                     start: chrono::Duration::seconds(168),
                     title: Some(String::from("Hearing Aids")),
-                    image_url: Some(
+                    image: Some(Image::Url(
                         url::Url::parse("https://example.com/images/hearing_aids.jpg").unwrap(),
-                    ),
+                    )),
                     ..Default::default()
                 },
                 Chapter {
@@ -33,28 +33,34 @@ fn test_parse_chapters() {
                 Chapter {
                     start: chrono::Duration::seconds(410),
                     title: Some(String::from("Namespace")),
-                    image_url: Some(
+                    image: Some(Image::Url(
                         url::Url::parse("https://example.com/images/namepsace_example.jpg")
                             .unwrap(),
-                    ),
-                    url: Some(
-                        url::Url::parse("https://github.com/Podcastindex-org/podcast-namespace")
-                            .unwrap(),
-                    ),
+                    )),
+                    link: Some(Link {
+                        url: url::Url::parse(
+                            "https://github.com/Podcastindex-org/podcast-namespace",
+                        )
+                        .unwrap(),
+                        title: None,
+                    }),
                     ..Default::default()
                 },
                 Chapter {
                     start: chrono::Duration::seconds(3990),
                     title: Some(String::from("Just Break Up")),
-                    image_url: Some(
+                    image: Some(Image::Url(
                         url::Url::parse("https://example.com/images/justbreakuppod.png").unwrap(),
-                    ),
+                    )),
                     ..Default::default()
                 },
                 Chapter {
                     start: chrono::Duration::seconds(4600),
                     title: Some(String::from("Donations")),
-                    url: Some(url::Url::parse("https://example.com/paypal_link").unwrap()),
+                    link: Some(Link {
+                        url: url::Url::parse("https://example.com/paypal_link").unwrap(),
+                        title: None,
+                    }),
                     ..Default::default()
                 },
                 Chapter {
@@ -171,13 +177,19 @@ fn test_chapters_from_mp3_file() {
             Chapter {
                 start: chrono::Duration::minutes(5) + chrono::Duration::seconds(8),
                 title: Some(String::from("On being first")),
-                url: Some(url::Url::parse("https://www.osti.gov/opennet/manhattan-project-history/Events/1945/trinity.htm").unwrap()),
+                link: Some(Link{
+                    url: url::Url::parse("https://www.osti.gov/opennet/manhattan-project-history/Events/1945/trinity.htm").unwrap(),
+                    title: Some(String::from("The Trinity Test")),
+                }),
                 ..Default::default()
             },
             Chapter {
                 start: chrono::Duration::minutes(8) + chrono::Duration::seconds(8),
                 title: Some(String::from("Why we're going to the Moon")),
-                url: Some(url::Url::parse("https://www.nasa.gov/mission_pages/apollo/missions/apollo11.html").unwrap()),
+                link: Some(Link{
+                    url: url::Url::parse("https://www.nasa.gov/mission_pages/apollo/missions/apollo11.html").unwrap(),
+                    title: None,
+                }),
                 ..Default::default()
             },
             Chapter {

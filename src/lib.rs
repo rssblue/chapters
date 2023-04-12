@@ -5,6 +5,19 @@ use id3::Tag;
 use serde::Deserialize;
 use std::path::Path;
 
+#[derive(Debug, PartialEq)]
+pub struct Link {
+    pub url: url::Url,
+    pub title: Option<String>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Image {
+    Url(url::Url),
+    // TODO: some ways of encoding chapters (e.g., ID3 tags in MP3 files) allow to embed images directly in the file.
+    // Data(Vec<u8>),
+}
+
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq)]
 pub struct Chapter {
@@ -14,10 +27,10 @@ pub struct Chapter {
     pub end: Option<Duration>,
     /// The title of this chapter.
     pub title: Option<String>,
-    /// The url of an image to use as chapter art.
-    pub image_url: Option<url::Url>,
-    /// The url of a web page or supporting document that's related to the topic of this chapter.
-    pub url: Option<url::Url>,
+    /// The image to use as chapter art.
+    pub image: Option<Image>,
+    /// Web page or supporting document that's related to the topic of this chapter.
+    pub link: Option<Link>,
     /// If this property is set to true, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface. In the original spec, the inverse of this is called `toc`.
     pub hidden: bool,
     // TODO: This object defines an optional location that is tied to this chapter.
@@ -30,8 +43,8 @@ impl Default for Chapter {
             start: Duration::zero(),
             end: None,
             title: None,
-            image_url: None,
-            url: None,
+            image: None,
+            link: None,
             hidden: false,
         }
     }
@@ -43,8 +56,14 @@ impl From<PodcastNamespaceChapter> for Chapter {
             start: podcast_namespace_chapter.start_time,
             end: podcast_namespace_chapter.end_time,
             title: podcast_namespace_chapter.title,
-            image_url: podcast_namespace_chapter.img,
-            url: podcast_namespace_chapter.url,
+            image: match podcast_namespace_chapter.img {
+                Some(url) => Some(Image::Url(url)),
+                None => None,
+            },
+            link: match podcast_namespace_chapter.url {
+                Some(url) => Some(Link { url, title: None }),
+                None => None,
+            },
             hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
         }
     }
@@ -186,8 +205,8 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
                 start,
                 end: None,
                 title: Some(text.to_string()),
-                image_url: None,
-                url: None,
+                image: None,
+                link: None,
                 hidden: false,
             })
         } else {
@@ -251,18 +270,27 @@ pub fn chapters_from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, S
         };
 
         let mut title = None;
-        let mut url = None;
+        let mut link = None;
 
         for subframe in &id3_chapter.frames {
             match subframe.content() {
                 id3::Content::Text(text) => {
                     title = Some(text.clone());
                 }
-                id3::Content::Link(link) => {
-                    url = Some(url::Url::parse(link).map_err(|e| e.to_string())?);
+                id3::Content::Link(url) => {
+                    link = Some(Link {
+                        url: url::Url::parse(url).map_err(|e| e.to_string())?,
+                        title: None,
+                    });
                 }
-                id3::Content::ExtendedLink(link) => {
-                    url = Some(url::Url::parse(link.link.as_str()).map_err(|e| e.to_string())?);
+                id3::Content::ExtendedLink(extended_link) => {
+                    link = Some(Link {
+                        url: url::Url::parse(&extended_link.link).map_err(|e| e.to_string())?,
+                        title: match extended_link.description.trim() {
+                            "" => None,
+                            description => Some(description.to_string()),
+                        },
+                    });
                 }
                 _ => {}
             }
@@ -270,7 +298,7 @@ pub fn chapters_from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, S
 
         chapters.push(Chapter {
             title,
-            url,
+            link,
             start,
             end,
             ..Default::default()
