@@ -156,7 +156,8 @@ fn test_chapters_from_mp3_file() {
         expected: Result<Vec<Chapter>, String>,
     }
 
-    let tests = vec![Test {
+    let tests = vec![
+        Test {
         file_path: "tests/data/id3-chapters.jfk-rice-university-speech.mp3",
         expected: Ok(vec![
             Chapter {
@@ -198,7 +199,12 @@ fn test_chapters_from_mp3_file() {
                 ..Default::default()
             },
         ]),
-    }];
+    },
+        Test {
+            file_path: "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3",
+            expected: Ok(vec![]),
+        },
+    ];
 
     for test in tests {
         let path = std::path::Path::new(test.file_path);
