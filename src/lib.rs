@@ -121,9 +121,13 @@ pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, Strin
 
 #[derive(Debug, Clone)]
 enum TimestampType {
+    /// MM:SS format, e.g., "12:34"
     MMSS,
+    /// HH:MM:SS format, e.g., "01:23:45"
     HHMMSS,
+    /// MM:SS format within parentheses, e.g., "(12:34)"
     MMSSParentheses,
+    /// HH:MM:SS format within parentheses, e.g., "(01:23:45)"
     HHMMSSParentheses,
 }
 
@@ -140,6 +144,7 @@ impl TimestampType {
     }
 
     fn line_regex_pattern(&self) -> String {
+        // Combines the timestamp regex pattern with space (or a punctuation mark) and a pattern for text following the timestamp.
         format!("{}[.!?\\- ](?P<text>.+)", self.regex_pattern())
     }
 }
@@ -148,47 +153,58 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
     let mut chapters = Vec::new();
     let mut timestamp_type: Option<TimestampType> = None;
 
-    for line in description.lines().map(|line| line.trim()) {
+    let detect_timestamp_type = |line: &str| -> Option<TimestampType> {
         if let Some(first_char) = line.chars().next() {
-            if timestamp_type.is_none() {
-                // Try to detect a timestamp type.
-                if first_char == '(' || first_char.is_numeric() {
-                    // Try all regexes.
-                    timestamp_type = [
-                        TimestampType::MMSS,
-                        TimestampType::HHMMSS,
-                        TimestampType::MMSSParentheses,
-                        TimestampType::HHMMSSParentheses,
-                    ]
-                    .iter()
-                    .find(|&temp_timestamp_type| {
-                        regex::Regex::new(temp_timestamp_type.line_regex_pattern().as_str())
-                            .map(|re| re.captures(line).is_some())
-                            .unwrap_or(false)
-                    })
-                    .cloned();
-                }
+            if first_char == '(' || first_char.is_numeric() {
+                return [
+                    TimestampType::MMSS,
+                    TimestampType::HHMMSS,
+                    TimestampType::MMSSParentheses,
+                    TimestampType::HHMMSSParentheses,
+                ]
+                .iter()
+                .find(|&temp_timestamp_type| {
+                    regex::Regex::new(temp_timestamp_type.line_regex_pattern().as_str())
+                        .map(|re| re.captures(line).is_some())
+                        .unwrap_or(false)
+                })
+                .cloned();
             }
+        }
+        None
+    };
 
-            if timestamp_type.is_some() {
-                let timestamp_type = timestamp_type.as_ref().unwrap();
-                let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
-                    .map_err(|e| e.to_string())?;
+    let parse_line = |line: &str, timestamp_type: &TimestampType| -> Option<Chapter> {
+        let re = regex::Regex::new(timestamp_type.line_regex_pattern().as_str())
+            .map_err(|e| e.to_string())
+            .ok()?;
 
-                if let Some(captures) = re.captures(line) {
-                    let start = parse_timestamp(&captures)?;
-                    let text = captures.name("text").unwrap().as_str();
-                    chapters.push(Chapter {
-                        start,
-                        end: None,
-                        title: Some(text.to_string()),
-                        image_url: None,
-                        url: None,
-                        hidden: false,
-                    });
-                } else {
-                    break;
-                }
+        if let Some(captures) = re.captures(line) {
+            let start = parse_timestamp(&captures).ok()?;
+            let text = captures.name("text").unwrap().as_str();
+            Some(Chapter {
+                start,
+                end: None,
+                title: Some(text.to_string()),
+                image_url: None,
+                url: None,
+                hidden: false,
+            })
+        } else {
+            None
+        }
+    };
+
+    for line in description.lines().map(|line| line.trim()) {
+        if timestamp_type.is_none() {
+            timestamp_type = detect_timestamp_type(line);
+        }
+
+        if let Some(timestamp_type) = timestamp_type.as_ref() {
+            if let Some(chapter) = parse_line(line, timestamp_type) {
+                chapters.push(chapter);
+            } else {
+                break;
             }
         }
     }
@@ -197,22 +213,15 @@ pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, Stri
 }
 
 fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
-    let hours = match captures.name("hours") {
-        Some(hours) => hours.as_str().parse::<i64>().map_err(|e| e.to_string())?,
-        None => 0,
+    let parse_i64 = |capture: Option<regex::Match>| -> Result<i64, String> {
+        capture
+            .map(|m| m.as_str().parse::<i64>().map_err(|e| e.to_string()))
+            .unwrap_or(Ok(0))
     };
-    let minutes = captures
-        .name("minutes")
-        .unwrap()
-        .as_str()
-        .parse::<i64>()
-        .map_err(|e| e.to_string())?;
-    let seconds = captures
-        .name("seconds")
-        .unwrap()
-        .as_str()
-        .parse::<i64>()
-        .map_err(|e| e.to_string())?;
+
+    let hours = parse_i64(captures.name("hours"))?;
+    let minutes = parse_i64(captures.name("minutes"))?;
+    let seconds = parse_i64(captures.name("seconds"))?;
 
     Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
 }
