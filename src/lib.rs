@@ -35,6 +35,19 @@ impl Default for Chapter {
     }
 }
 
+impl From<PodcastNamespaceChapter> for Chapter {
+    fn from(podcast_namespace_chapter: PodcastNamespaceChapter) -> Self {
+        Self {
+            start: podcast_namespace_chapter.start_time,
+            end: podcast_namespace_chapter.end_time,
+            title: podcast_namespace_chapter.title,
+            image_url: podcast_namespace_chapter.img,
+            url: podcast_namespace_chapter.url,
+            hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
+        }
+    }
+}
+
 /// Chapters of the [Podcast namespace](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq, Deserialize)]
 struct PodcastNamespaceChapters {
@@ -94,29 +107,14 @@ where
     Ok(url::Url::parse(&s).ok())
 }
 
-fn podcast_namespace_chapters_to_chapters(
-    podcast_namespace_chapters: PodcastNamespaceChapters,
-) -> Vec<Chapter> {
-    podcast_namespace_chapters
-        .chapters
-        .into_iter()
-        .map(|podcast_namespace_chapter| Chapter {
-            start: podcast_namespace_chapter.start_time,
-            end: podcast_namespace_chapter.end_time,
-            title: podcast_namespace_chapter.title,
-            image_url: podcast_namespace_chapter.img,
-            url: podcast_namespace_chapter.url,
-            hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
-        })
-        .collect()
-}
-
 pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
     let podcast_namespace_chapters: PodcastNamespaceChapters =
         serde_json::from_reader(reader).map_err(|e| e.to_string())?;
-    Ok(podcast_namespace_chapters_to_chapters(
-        podcast_namespace_chapters,
-    ))
+    Ok(podcast_namespace_chapters
+        .chapters
+        .into_iter()
+        .map(|c| c.into())
+        .collect())
 }
 
 #[derive(Debug, Clone)]
