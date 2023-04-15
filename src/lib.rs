@@ -72,8 +72,8 @@ impl From<PodcastNamespaceChapter> for Chapter {
 /// Chapters of the [Podcast namespace](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq, Deserialize)]
 struct PodcastNamespaceChapters {
-    pub version: String,
-    pub chapters: Vec<PodcastNamespaceChapter>,
+    version: String,
+    chapters: Vec<PodcastNamespaceChapter>,
 }
 
 #[derive(Debug, PartialEq, Deserialize)]
@@ -81,22 +81,22 @@ struct PodcastNamespaceChapters {
 struct PodcastNamespaceChapter {
     /// The starting time of the chapter.
     #[serde(deserialize_with = "float_to_duration")]
-    pub start_time: Duration,
+    start_time: Duration,
     /// The end time of the chapter.
     #[serde(default, deserialize_with = "float_to_duration_option")]
-    pub end_time: Option<Duration>,
+    end_time: Option<Duration>,
     /// The title of this chapter.
     #[serde(default)]
-    pub title: Option<String>,
+    title: Option<String>,
     /// The url of an image to use as chapter art.
     #[serde(default, deserialize_with = "string_to_url")]
-    pub img: Option<url::Url>,
+    img: Option<url::Url>,
     /// The url of a web page or supporting document that's related to the topic of this chapter.
     #[serde(default, deserialize_with = "string_to_url")]
-    pub url: Option<url::Url>,
+    url: Option<url::Url>,
     /// If this property is present and set to false, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface.
     #[serde(default)]
-    pub toc: Option<bool>,
+    toc: Option<bool>,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
 }
