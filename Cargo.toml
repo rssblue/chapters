@@ -1,6 +1,6 @@
 [package]
 authors = ["RSS Blue", "Dovydas Joksas"]
-categories = ["parsing"]
+categories = ["parsing", "multimedia::audio"]
 description = "Manage podcast chapters in Rust"
 edition = "2021"
 keywords = ["podcast"]
