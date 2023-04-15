@@ -1,13 +1,17 @@
 #![doc = include_str!("../README.md")]
 
+mod serialization;
+
 use chrono::Duration;
 use id3::Tag;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Link {
+    #[serde(serialize_with = "serialization::url_to_string")]
     pub url: url::Url,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
 }
 
@@ -19,17 +23,25 @@ pub enum Image {
 }
 
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Chapter {
     /// The starting time of the chapter.
+    #[serde(serialize_with = "serialization::duration_to_float")]
     pub start: Duration,
     /// The end time of the chapter.
+    #[serde(
+        serialize_with = "serialization::duration_option_to_float_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub end: Option<Duration>,
     /// The title of this chapter.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     /// The image to use as chapter art.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<Image>,
     /// Web page or supporting document that's related to the topic of this chapter.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub link: Option<Link>,
     /// If this property is set to true, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface. In the original spec, the inverse of this is called `toc`.
     pub hidden: bool,
@@ -80,52 +92,25 @@ struct PodcastNamespaceChapters {
 #[serde(rename_all = "camelCase")]
 struct PodcastNamespaceChapter {
     /// The starting time of the chapter.
-    #[serde(deserialize_with = "float_to_duration")]
+    #[serde(deserialize_with = "serialization::float_to_duration")]
     start_time: Duration,
     /// The end time of the chapter.
-    #[serde(default, deserialize_with = "float_to_duration_option")]
+    #[serde(default, deserialize_with = "serialization::float_to_duration_option")]
     end_time: Option<Duration>,
     /// The title of this chapter.
     #[serde(default)]
     title: Option<String>,
     /// The url of an image to use as chapter art.
-    #[serde(default, deserialize_with = "string_to_url")]
+    #[serde(default, deserialize_with = "serialization::string_to_url")]
     img: Option<url::Url>,
     /// The url of a web page or supporting document that's related to the topic of this chapter.
-    #[serde(default, deserialize_with = "string_to_url")]
+    #[serde(default, deserialize_with = "serialization::string_to_url")]
     url: Option<url::Url>,
     /// If this property is present and set to false, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface.
     #[serde(default)]
     toc: Option<bool>,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
-}
-
-fn float_to_duration_option<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let f = match Option::<f64>::deserialize(deserializer) {
-        Ok(f) => f,
-        Err(_) => return Ok(None),
-    };
-    Ok(f.map(|f| Duration::seconds(f as i64)))
-}
-
-fn float_to_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let f = f64::deserialize(deserializer)?;
-    Ok(Duration::seconds(f as i64))
-}
-
-fn string_to_url<'de, D>(deserializer: D) -> Result<Option<url::Url>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    Ok(url::Url::parse(&s).ok())
 }
 
 pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {

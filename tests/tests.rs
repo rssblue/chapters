@@ -213,3 +213,56 @@ fn test_chapters_from_mp3_file() {
         assert_eq!(result, test.expected);
     }
 }
+
+#[test]
+fn test_serialize_to_json() {
+    let chapters = vec![
+        Chapter {
+            start: chrono::Duration::seconds(0),
+            end: Some(chrono::Duration::seconds(10)),
+            title: Some(String::from("Start")),
+            link: Some(Link {
+                url: url::Url::parse("https://example.com").unwrap(),
+                title: Some(String::from("Example")),
+            }),
+            image: Some(Image::Url(
+                url::Url::parse("https://example.com/image.png").unwrap(),
+            )),
+            hidden: false,
+        },
+        Chapter {
+            start: chrono::Duration::seconds(10),
+            end: None,
+            title: None,
+            link: None,
+            image: None,
+            hidden: false,
+        },
+    ];
+
+    // ensure indentation
+    let result = serde_json::to_string_pretty(&chapters).unwrap();
+
+    assert_eq!(
+        result,
+        r#"[
+  {
+    "start": 0.0,
+    "end": 10.0,
+    "title": "Start",
+    "image": {
+      "Url": "https://example.com/image.png"
+    },
+    "link": {
+      "url": "https://example.com/",
+      "title": "Example"
+    },
+    "hidden": false
+  },
+  {
+    "start": 10.0,
+    "hidden": false
+  }
+]"#
+    );
+}
