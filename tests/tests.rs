@@ -1,8 +1,8 @@
-use chapters::{parse_chapters, Chapter, Image, Link};
+use chapters::{from_json, Chapter, Image, Link};
 use pretty_assertions::assert_eq;
 
 #[test]
-fn test_parse_chapters() {
+fn test_from_json() {
     struct Test {
         file_contents: &'static str,
         expected: Result<Vec<Chapter>, String>,
@@ -88,14 +88,14 @@ fn test_parse_chapters() {
 
     for test in tests {
         let reader = std::io::BufReader::new(test.file_contents.as_bytes());
-        let result = parse_chapters(reader);
+        let result = from_json(reader);
 
         assert_eq!(result, test.expected);
     }
 }
 
 #[test]
-fn test_chapters_from_description() {
+fn test_from_description() {
     struct Test {
         description: &'static str,
         expected: Result<Vec<Chapter>, String>,
@@ -143,14 +143,14 @@ fn test_chapters_from_description() {
     }];
 
     for test in tests {
-        let result = chapters::chapters_from_description(test.description);
+        let result = chapters::from_description(test.description);
 
         assert_eq!(result, test.expected);
     }
 }
 
 #[test]
-fn test_chapters_from_mp3_file() {
+fn test_from_mp3_file() {
     struct Test {
         file_path: &'static str,
         expected: Result<Vec<Chapter>, String>,
@@ -208,14 +208,14 @@ fn test_chapters_from_mp3_file() {
 
     for test in tests {
         let path = std::path::Path::new(test.file_path);
-        let result = chapters::chapters_from_mp3_file(path);
+        let result = chapters::from_mp3_file(path);
 
         assert_eq!(result, test.expected);
     }
 }
 
 #[test]
-fn test_serialize_to_json() {
+fn test_to_json() {
     let chapters = vec![
         Chapter {
             start: chrono::Duration::seconds(0),

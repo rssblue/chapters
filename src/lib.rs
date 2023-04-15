@@ -113,7 +113,7 @@ struct PodcastNamespaceChapter {
     // pub location: Option<()>,
 }
 
-pub fn parse_chapters<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
+pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
     let podcast_namespace_chapters: PodcastNamespaceChapters =
         serde_json::from_reader(reader).map_err(|e| e.to_string())?;
     Ok(podcast_namespace_chapters
@@ -174,7 +174,7 @@ impl TimestampType {
     }
 }
 
-pub fn chapters_from_description(description: &str) -> Result<Vec<Chapter>, String> {
+pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
     let mut chapters = Vec::new();
     let mut timestamp_type: Option<TimestampType> = None;
 
@@ -231,7 +231,7 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
 }
 
 /// Reads chapter frames in ID3 tags.
-pub fn chapters_from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
+pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
     let mut chapters = Vec::new();
 
