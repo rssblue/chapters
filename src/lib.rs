@@ -124,7 +124,7 @@ struct PodcastNamespaceChapter {
 
 /// Extracts chapters from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 ///
-/// Example:
+/// # Example:
 /// ```rust
 /// # main() {
 /// # let filepath = std::env::args()
@@ -202,11 +202,11 @@ impl TimestampType {
 
 /// Extracts chapters from episode description (show notes).
 ///
-/// Example:
+/// # Example:
 /// ```rust
 /// # main() {
 /// let description = r#"
-/// In this episode, we explore a new hot trend in fitness: "The Movement"!
+/// In this episode, we explore a hot new trend in fitness: "The Movement"!
 ///
 /// 00:00 - The Movement
 /// 05:04 - Baboons
@@ -275,7 +275,7 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
 
 /// Extracts chapters from MP3 file's ID3 tag frames.
 ///
-/// Example:
+/// # Example:
 /// ```rust
 /// # main() {
 /// #  let filepath_str = std::env::args()
