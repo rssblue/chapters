@@ -1,4 +1,8 @@
 #![doc = include_str!("../README.md")]
+#![deny(missing_docs)]
+#![deny(rustdoc::broken_intra_doc_links)]
+#![feature(rustdoc_missing_doc_code_examples)]
+#![warn(rustdoc::missing_doc_code_examples)]
 
 mod serialization;
 
@@ -7,16 +11,21 @@ use id3::Tag;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
+/// Represents a web link for the chapter.
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Link {
+    /// The URL of the link.
     #[serde(serialize_with = "serialization::url_to_string")]
     pub url: url::Url,
+    /// The title of the link.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
 }
 
+/// Represents a chapter image.
 #[derive(Debug, PartialEq)]
 pub enum Image {
+    /// The URL of the image.
     Url(url::Url),
     // TODO: some ways of encoding chapters (e.g., ID3 tags in MP3 files) allow to embed images directly in the file.
     // Data(Vec<u8>),
@@ -113,6 +122,23 @@ struct PodcastNamespaceChapter {
     // pub location: Option<()>,
 }
 
+/// Extracts chapters from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
+///
+/// Example:
+/// ```rust
+/// # main() {
+/// # let filepath = std::env::args()
+/// #     .nth(1)
+/// #     .expect("Expected a path to a JSON file as the first argument");
+/// #
+/// let file = std::fs::File::open(filepath).expect("Failed to open file");
+///
+/// let reader = std::io::BufReader::new(file);
+///
+/// let chapters = chapters::from_json(reader).expect("Failed to parse chapters");
+/// println!("{:#?}", chapters);
+/// # }
+/// ```
 pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
     let podcast_namespace_chapters: PodcastNamespaceChapters =
         serde_json::from_reader(reader).map_err(|e| e.to_string())?;
@@ -174,6 +200,23 @@ impl TimestampType {
     }
 }
 
+/// Extracts chapters from episode description (show notes).
+///
+/// Example:
+/// ```rust
+/// # main() {
+/// let description = r#"
+/// In this episode, we explore a new hot trend in fitness: "The Movement"!
+///
+/// 00:00 - The Movement
+/// 05:04 - Baboons
+/// 09:58 - Steve Jobs
+/// "#;
+///
+/// let chapters = chapters::from_description(description).expect("Failed to parse chapters");
+/// assert_eq!(chapters.len(), 3);
+/// # }
+/// ```
 pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
     let mut chapters = Vec::new();
     let mut timestamp_type: Option<TimestampType> = None;
@@ -230,7 +273,18 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
     Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
 }
 
-/// Reads chapter frames in ID3 tags.
+/// Extracts chapters from MP3 file's ID3 tag frames.
+///
+/// Example:
+/// ```rust
+/// # main() {
+/// #  let filepath_str = std::env::args()
+/// #      .nth(1)
+/// #      .expect("Expected a path to an MP3 file as the first argument");
+/// # let filepath = std::path::Path::new(test.file_path);
+/// let chapters = chapters::from_mp3_file(filepath).expect("Failed to parse chapters");
+/// println!("{:#?}", chapters);
+/// # }
 pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
     let mut chapters = Vec::new();
