@@ -11,7 +11,7 @@ use id3::Tag;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-/// Represents a web link for the chapter.
+/// Represents a web link for the [chapter](crate::Chapter).
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Link {
     /// The URL of the link.
@@ -22,7 +22,7 @@ pub struct Link {
     pub title: Option<String>,
 }
 
-/// Represents a chapter image.
+/// Represents a [chapter](crate::Chapter) image.
 #[derive(Debug, PartialEq)]
 pub enum Image {
     /// The URL of the image.
@@ -122,7 +122,7 @@ struct PodcastNamespaceChapter {
     // pub location: Option<()>,
 }
 
-/// Extracts chapters from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
+/// Extracts [chapters](crate::Chapter) from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 ///
 /// # Example:
 /// ```rust
@@ -200,7 +200,7 @@ impl TimestampType {
     }
 }
 
-/// Extracts chapters from episode description (show notes).
+/// Extracts [chapters](crate::Chapter) from episode description (show notes).
 ///
 /// # Example:
 /// ```rust
@@ -273,7 +273,7 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
     Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
 }
 
-/// Extracts chapters from MP3 file's ID3 tag frames.
+/// Extracts [chapters](crate::Chapter) from MP3 file's ID3 tag frames.
 ///
 /// # Example:
 /// ```rust
