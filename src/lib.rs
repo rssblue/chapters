@@ -126,11 +126,8 @@ struct PodcastNamespaceChapter {
 ///
 /// # Example:
 /// ```rust
-/// # main() {
-/// # let filepath = std::env::args()
-/// #     .nth(1)
-/// #     .expect("Expected a path to a JSON file as the first argument");
-/// #
+/// # fn main() {
+/// # let filepath = "tests/data/podcast-namespace-chapters.github-example.json";
 /// let file = std::fs::File::open(filepath).expect("Failed to open file");
 ///
 /// let reader = std::io::BufReader::new(file);
@@ -205,7 +202,7 @@ impl TimestampType {
 ///
 /// # Example:
 /// ```rust
-/// # main() {
+/// # fn main() {
 /// let description = r#"
 /// In this episode, we explore a hot new trend in fitness: "The Movement"!
 ///
@@ -233,7 +230,7 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
             Some(Chapter {
                 start,
                 end: None,
-                title: Some(text.to_string()),
+                title: Some(text.trim().to_string()),
                 image: None,
                 link: None,
                 hidden: false,
@@ -278,11 +275,9 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
 ///
 /// # Example:
 /// ```rust
-/// # main() {
-/// #  let filepath_str = std::env::args()
-/// #      .nth(1)
-/// #      .expect("Expected a path to an MP3 file as the first argument");
-/// # let filepath = std::path::Path::new(test.file_path);
+/// # fn main() {
+/// # let filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.mp3";
+/// # let filepath = std::path::Path::new(&filepath_str);
 /// let chapters = chapters::from_mp3_file(filepath).expect("Failed to parse chapters");
 /// println!("{:#?}", chapters);
 /// # }
