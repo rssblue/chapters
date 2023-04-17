@@ -180,6 +180,7 @@ impl TimestampType {
 
     fn from_line(line: &str) -> Option<Self> {
         if let Some(first_char) = line.chars().next() {
+            // regex can be expensive, so we first check if the line at least starts with the right character.
             if first_char == '(' || first_char.is_numeric() {
                 return [
                     Self::MMSS,
