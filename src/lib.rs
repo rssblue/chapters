@@ -7,7 +7,7 @@
 mod serialization;
 
 use chrono::Duration;
-use id3::Tag;
+use id3::{Error, ErrorKind, Tag, TagLike, Version};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -311,6 +311,7 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
                 id3::Content::Text(text) => {
                     title = Some(text.clone());
                 }
+                // TODO: Check if anyone uses this method as opposed to `ExtendedLink`.
                 id3::Content::Link(url) => {
                     link = Some(Link {
                         url: url::Url::parse(url).map_err(|e| e.to_string())?,
@@ -343,4 +344,110 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     chapters.sort_by(|a, b| a.start.cmp(&b.start));
 
     Ok(chapters)
+}
+
+/// Writes [chapters](crate::Chapter) to MP3 file's ID3 tag frames.
+/// # Example:
+/// ```rust
+/// # use chapters::{Chapter, Link};
+/// # use chrono::Duration;
+/// #
+/// #
+/// # fn main() {
+/// # let src_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3";
+/// # let src_filepath = std::path::Path::new(&src_filepath_str);
+/// # let dst_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.frames-added.mp3";
+/// # let dst_filepath = std::path::Path::new(&dst_filepath_str);
+/// let chapters = vec![
+///     Chapter {
+///         start: Duration::seconds(0),
+///         title: Some("Introduction".to_string()),
+///         link: Some(Link{
+///             url: url::Url::parse("https://www.rice.edu").unwrap(),
+///             title: None,
+///         }),
+///         ..Default::default()
+///     },
+///     Chapter {
+///         start: Duration::seconds(42),
+///         title: Some("Status quo".to_string()),
+///         ..Default::default()
+///     },
+///     Chapter {
+///         start: chrono::Duration::minutes(5) + chrono::Duration::seconds(8),
+///         title: Some(String::from("On being first")),
+///         link: Some(Link{
+///             url: url::Url::parse("https://www.osti.gov/opennet/manhattan-project-history/Events/1945/trinity.htm").unwrap(),
+///             title: Some(String::from("The Trinity Test")),
+///         }),
+///         ..Default::default()
+///     },
+///     ];
+/// chapters::to_mp3_file(src_filepath, dst_filepath, &chapters).expect("Failed to write chapters");
+///
+/// let chapters_read = chapters::from_mp3_file(dst_filepath).expect("Failed to read chapters");
+/// assert_eq!(chapters, chapters_read);
+/// #
+/// # // Cleanup
+/// # std::fs::remove_file(dst_filepath).unwrap();
+/// # }
+/// ```
+pub fn to_mp3_file<P: AsRef<Path>>(
+    src_path: P,
+    dst_path: P,
+    chapters: &[Chapter],
+) -> Result<(), String> {
+    std::fs::copy(&src_path, &dst_path).map_err(|e| format!("Failed to copy file: {}", e))?;
+
+    let mut tag = match Tag::read_from_path(&src_path) {
+        Ok(tag) => tag,
+        Err(Error {
+            kind: ErrorKind::NoTag,
+            ..
+        }) => Tag::new(),
+        Err(err) => return Err(format!("Error reading ID3 tag: {}", err)),
+    };
+
+    for (i, chapter) in chapters.iter().enumerate() {
+        let mut id3_chapter = id3::frame::Chapter {
+            element_id: format!("chp{}", i + 1),
+            start_time: chapter.start.num_milliseconds() as u32,
+            end_time: if let Some(end) = chapter.end {
+                end.num_milliseconds() as u32
+            } else {
+                chapter.start.num_milliseconds() as u32
+            },
+            start_offset: 0,
+            end_offset: 0,
+            frames: Vec::new(),
+        };
+
+        if let Some(title) = &chapter.title {
+            let frame = id3::frame::Frame::with_content("TIT2", id3::Content::Text(title.clone()));
+            id3_chapter.frames.push(frame);
+        }
+
+        if let Some(link) = &chapter.link {
+            // title or "" if None
+            let link_title = link.title.as_ref().map_or("", |t| t.as_str());
+            let frame = id3::frame::Frame::with_content(
+                "WXXX",
+                id3::Content::ExtendedLink(id3::frame::ExtendedLink {
+                    link: link.url.to_string(),
+                    description: link_title.to_string(),
+                }),
+            );
+            id3_chapter.frames.push(frame);
+        }
+
+        tag.add_frame(id3::frame::Frame::with_content(
+            "CHAP",
+            id3::Content::Chapter(id3_chapter),
+        ));
+    }
+
+    tag.write_to_path(&dst_path, Version::Id3v24)
+        .map_err(|e| format!("Error writing ID3 tag: {}", e))?;
+
+    Ok(())
 }
