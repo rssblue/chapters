@@ -196,8 +196,8 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 ///    },
 /// ];
 ///
-/// let chapters = chapters::to_json(&chapters).expect("Failed to serialize chapters");
-/// # assert_eq!(chapters, r#"{
+/// let json_chapters = chapters::to_json(&chapters).expect("Failed to serialize chapters");
+/// # assert_eq!(json_chapters, r#"{
 /// #   "version": "1.2",
 /// #   "chapters": [
 /// #     {
