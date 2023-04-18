@@ -285,14 +285,7 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
     let mut chapters = Vec::new();
 
-    for frame in tag.frames() {
-        let id3_chapter = match frame.content() {
-            id3::Content::Chapter(chapter) => chapter,
-            _ => {
-                continue;
-            }
-        };
-
+    for id3_chapter in tag.chapters() {
         let start = Duration::milliseconds(id3_chapter.start_time as i64);
 
         let temp_end = Duration::milliseconds(id3_chapter.end_time as i64);
