@@ -52,7 +52,7 @@ pub fn duration_to_float<S>(duration: &Duration, serializer: S) -> Result<S::Ok,
 where
     S: serde::Serializer,
 {
-    serializer.serialize_f64(duration.num_seconds() as f64)
+    serializer.serialize_f64(duration.num_milliseconds() as f64 / 1000.0)
 }
 
 pub fn string_to_url<'de, D>(deserializer: D) -> Result<Option<url::Url>, D::Error>
@@ -68,4 +68,14 @@ where
     S: serde::Serializer,
 {
     serializer.serialize_str(url.as_str())
+}
+
+pub fn url_option_to_string<S>(url: &Option<url::Url>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match url {
+        Some(url) => url_to_string(url, serializer),
+        None => serializer.serialize_none(),
+    }
 }

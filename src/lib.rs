@@ -91,29 +91,47 @@ impl From<PodcastNamespaceChapter> for Chapter {
 }
 
 /// Chapters of the [Podcast namespace](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 struct PodcastNamespaceChapters {
     version: String,
     chapters: Vec<PodcastNamespaceChapter>,
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct PodcastNamespaceChapter {
     /// The starting time of the chapter.
-    #[serde(deserialize_with = "serialization::float_to_duration")]
+    #[serde(
+        deserialize_with = "serialization::float_to_duration",
+        serialize_with = "serialization::duration_to_float"
+    )]
     start_time: Duration,
     /// The end time of the chapter.
-    #[serde(default, deserialize_with = "serialization::float_to_duration_option")]
+    #[serde(
+        default,
+        deserialize_with = "serialization::float_to_duration_option",
+        serialize_with = "serialization::duration_option_to_float_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     end_time: Option<Duration>,
     /// The title of this chapter.
     #[serde(default)]
     title: Option<String>,
     /// The url of an image to use as chapter art.
-    #[serde(default, deserialize_with = "serialization::string_to_url")]
+    #[serde(
+        default,
+        deserialize_with = "serialization::string_to_url",
+        serialize_with = "serialization::url_option_to_string",
+        skip_serializing_if = "Option::is_none"
+    )]
     img: Option<url::Url>,
     /// The url of a web page or supporting document that's related to the topic of this chapter.
-    #[serde(default, deserialize_with = "serialization::string_to_url")]
+    #[serde(
+        default,
+        deserialize_with = "serialization::string_to_url",
+        serialize_with = "serialization::url_option_to_string",
+        skip_serializing_if = "Option::is_none"
+    )]
     url: Option<url::Url>,
     /// If this property is present and set to false, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface.
     #[serde(default)]
@@ -144,6 +162,87 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
         .into_iter()
         .map(|c| c.into())
         .collect())
+}
+
+/// Writes [chapters](crate::Chapter) to a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
+///
+/// # Example:
+/// ```rust
+/// # use chapters::{Chapter, Image, Link};
+/// # use chrono::Duration;
+/// # use pretty_assertions::assert_eq;
+/// #
+/// # fn main() {
+/// let chapters = vec![
+///    Chapter {
+///        start: Duration::zero(),
+///        title: Some("Chapter 1".to_string()),
+///        ..Default::default()
+///    },
+///    Chapter {
+///        start: Duration::seconds(45),
+///        title: Some("Chapter 2".to_string()),
+///        link: Some(Link {
+///            url: "https://example.com".parse().unwrap(),
+///            title: Some("Example".to_string()),
+///        }),
+///        ..Default::default()
+///    },
+///    Chapter {
+///        start: Duration::minutes(2)+Duration::seconds(10)+Duration::milliseconds(500),
+///        title: Some("Chapter 3".to_string()),
+///        image: Some(Image::Url("https://example.com/image.png".parse().unwrap())),
+///        ..Default::default()
+///    },
+/// ];
+///
+/// let chapters = chapters::to_json(&chapters).expect("Failed to serialize chapters");
+/// # assert_eq!(chapters, r#"{
+/// #   "version": "1.2",
+/// #   "chapters": [
+/// #     {
+/// #       "startTime": 0.0,
+/// #       "title": "Chapter 1",
+/// #       "toc": true
+/// #     },
+/// #     {
+/// #       "startTime": 45.0,
+/// #       "title": "Chapter 2",
+/// #       "url": "https://example.com/",
+/// #       "toc": true
+/// #     },
+/// #     {
+/// #       "startTime": 130.5,
+/// #       "title": "Chapter 3",
+/// #       "img": "https://example.com/image.png",
+/// #       "toc": true
+/// #     }
+/// #   ]
+/// # }"#);
+/// # }
+/// ```
+pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
+    let podcast_namespace_chapters = PodcastNamespaceChapters {
+        version: "1.2".to_string(),
+        chapters: chapters
+            .iter()
+            .map(|c| PodcastNamespaceChapter {
+                start_time: c.start,
+                end_time: c.end,
+                title: c.title.clone(),
+                img: match &c.image {
+                    Some(Image::Url(url)) => Some(url.clone()),
+                    _ => None,
+                },
+                url: match &c.link {
+                    Some(link) => Some(link.url.clone()),
+                    None => None,
+                },
+                toc: Some(!c.hidden),
+            })
+            .collect(),
+    };
+    serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
 }
 
 #[derive(Debug, Clone)]
