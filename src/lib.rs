@@ -405,9 +405,9 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
 /// let description = chapters::to_description(&chapters).expect("Failed to write chapters");
 /// assert_eq!(
 ///     description,
-///     r#"00:00 - The Movement
-/// 05:04 - Baboons
-/// 09:58 - Steve Jobs
+///     r#"00:00 The Movement
+/// 05:04 Baboons
+/// 09:58 Steve Jobs
 /// "#
 /// );
 /// # }
@@ -428,7 +428,7 @@ pub fn to_description(chapters: &[Chapter]) -> Result<String, String> {
         let start = chapter.start;
         let title = chapter.title.as_ref().ok_or("Chapter title is missing")?;
         let line = format!(
-            "{} - {}",
+            "{} {}",
             duration_to_timestamp(start, timestamp_type.clone()),
             title
         );
