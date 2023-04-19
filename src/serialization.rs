@@ -24,7 +24,7 @@ where
         Ok(f) => f,
         Err(_) => return Ok(None),
     };
-    Ok(f.map(|f| Duration::seconds(f as i64)))
+    Ok(f.map(|f| Duration::milliseconds((f * 1000.0) as i64)))
 }
 
 pub fn float_to_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
@@ -32,7 +32,7 @@ where
     D: serde::Deserializer<'de>,
 {
     let f = f64::deserialize(deserializer)?;
-    Ok(Duration::seconds(f as i64))
+    Ok(Duration::milliseconds((f * 1000.0) as i64))
 }
 
 pub fn duration_option_to_float_option<S>(
