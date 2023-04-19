@@ -157,7 +157,7 @@ impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
     }
 }
 
-/// Extracts [chapters](crate::Chapter) from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
+/// Reads [chapters](crate::Chapter) from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 ///
 /// # Example:
 /// ```rust
@@ -308,7 +308,7 @@ impl TimestampType {
     }
 }
 
-/// Extracts [chapters](crate::Chapter) from [episode description](https://help.spotifyforpodcasters.com/hc/en-us/articles/13194991130779-Enabling-podcast-chapters-) (show notes).
+/// Reads [chapters](crate::Chapter) from [episode description](https://help.spotifyforpodcasters.com/hc/en-us/articles/13194991130779-Enabling-podcast-chapters-) (show notes).
 ///
 /// # Example:
 /// ```rust
@@ -466,7 +466,7 @@ fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> S
     }
 }
 
-/// Extracts [chapters](crate::Chapter) from MP3 file's [ID3](https://en.wikipedia.org/wiki/ID3) tag frames.
+/// Reads [chapters](crate::Chapter) from MP3 file's [ID3](https://en.wikipedia.org/wiki/ID3) tag frames.
 ///
 /// # Example:
 /// ```rust
