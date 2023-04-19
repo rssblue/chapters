@@ -197,28 +197,29 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 /// ];
 ///
 /// let json_chapters = chapters::to_json(&chapters).expect("Failed to serialize chapters");
-/// # assert_eq!(json_chapters, r#"{
-/// #   "version": "1.2",
-/// #   "chapters": [
-/// #     {
-/// #       "startTime": 0.0,
-/// #       "title": "Chapter 1",
-/// #       "toc": true
-/// #     },
-/// #     {
-/// #       "startTime": 45.0,
-/// #       "title": "Chapter 2",
-/// #       "url": "https://example.com/",
-/// #       "toc": true
-/// #     },
-/// #     {
-/// #       "startTime": 130.5,
-/// #       "title": "Chapter 3",
-/// #       "img": "https://example.com/image.png",
-/// #       "toc": true
-/// #     }
-/// #   ]
-/// # }"#);
+///
+/// assert_eq!(json_chapters, r#"{
+///   "version": "1.2",
+///   "chapters": [
+///     {
+///       "startTime": 0.0,
+///       "title": "Chapter 1",
+///       "toc": true
+///     },
+///     {
+///       "startTime": 45.0,
+///       "title": "Chapter 2",
+///       "url": "https://example.com/",
+///       "toc": true
+///     },
+///     {
+///       "startTime": 130.5,
+///       "title": "Chapter 3",
+///       "img": "https://example.com/image.png",
+///       "toc": true
+///     }
+///   ]
+/// }"#);
 /// # }
 /// ```
 pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
