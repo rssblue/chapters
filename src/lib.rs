@@ -245,6 +245,7 @@ pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
     serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
 }
 
+/// Timestamp format used in episode descriptions.
 #[derive(Debug, Clone)]
 enum TimestampType {
     /// MM:SS format, e.g., "12:34"
@@ -301,6 +302,8 @@ impl TimestampType {
 ///
 /// # Example:
 /// ```rust
+/// # use pretty_assertions::assert_eq;
+/// #
 /// # fn main() {
 /// let description = r#"
 /// In this episode, we explore a hot new trend in fitness: "The Movement"!
@@ -356,6 +359,76 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
     Ok(chapters)
 }
 
+/// Writes [chapters](crate::Chapter) to episode description (show notes).
+///
+/// Only the start time and title are used.
+///
+/// # Example:
+/// ```rust
+/// # use chapters::{Chapter, Link};
+/// # use chrono::Duration;
+/// # use pretty_assertions::assert_eq;
+/// #
+/// # fn main() {
+/// let chapters = vec![
+///     Chapter {
+///         start: Duration::zero(),
+///         title: Some("The Movement".to_string()),
+///         link: Some(Link {
+///             url: url::Url::parse("https://example.com/the-movement").unwrap(),
+///             title: None,
+///         }),
+///         ..Default::default()
+///     },
+///     Chapter {
+///         start: Duration::minutes(5) + Duration::seconds(4),
+///         title: Some("Baboons".to_string()),
+///         ..Default::default()
+///     },
+///     Chapter {
+///         start: Duration::minutes(9) + Duration::seconds(58),
+///         title: Some("Steve Jobs".to_string()),
+///         ..Default::default()
+///     },
+/// ];
+///
+/// let description = chapters::to_description(&chapters).expect("Failed to write chapters");
+/// assert_eq!(
+///     description,
+///     r#"00:00 - The Movement
+/// 05:04 - Baboons
+/// 09:58 - Steve Jobs
+/// "#
+/// );
+/// # }
+///    ```
+pub fn to_description(chapters: &[Chapter]) -> Result<String, String> {
+    let mut description = String::new();
+
+    let at_least_an_hour = chapters
+        .iter()
+        .any(|chapter| chapter.start >= Duration::hours(1));
+    let timestamp_type = if at_least_an_hour {
+        TimestampType::HHMMSS
+    } else {
+        TimestampType::MMSS
+    };
+
+    for chapter in chapters {
+        let start = chapter.start;
+        let title = chapter.title.as_ref().ok_or("Chapter title is missing")?;
+        let line = format!(
+            "{} - {}",
+            duration_to_timestamp(start, timestamp_type.clone()),
+            title
+        );
+        description.push_str(&line);
+        description.push_str("\n");
+    }
+
+    Ok(description)
+}
+
 fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
     let parse_i64 = |capture: Option<regex::Match>| -> Result<i64, String> {
         capture
@@ -368,6 +441,19 @@ fn parse_timestamp(captures: &regex::Captures) -> Result<Duration, String> {
     let seconds = parse_i64(captures.name("seconds"))?;
 
     Ok(Duration::hours(hours) + Duration::minutes(minutes) + Duration::seconds(seconds))
+}
+
+fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> String {
+    let hours = duration.num_hours();
+    let minutes = duration.num_minutes() - hours * 60;
+    let seconds = duration.num_seconds() - minutes * 60 - hours * 3600;
+
+    match timestamp_type {
+        TimestampType::MMSS => format!("{:02}:{:02}", minutes, seconds),
+        TimestampType::HHMMSS => format!("{:02}:{:02}:{:02}", hours, minutes, seconds),
+        TimestampType::MMSSParentheses => format!("({:02}:{:02})", minutes, seconds),
+        TimestampType::HHMMSSParentheses => format!("({:02}:{:02}:{:02})", hours, minutes, seconds),
+    }
 }
 
 /// Extracts [chapters](crate::Chapter) from MP3 file's ID3 tag frames.
@@ -443,7 +529,6 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
 /// ```rust
 /// # use chapters::{Chapter, Link};
 /// # use chrono::Duration;
-/// #
 /// #
 /// # fn main() {
 /// # let src_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3";
