@@ -1,8 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![deny(missing_docs)]
 #![deny(rustdoc::broken_intra_doc_links)]
-#![feature(rustdoc_missing_doc_code_examples)]
-#![warn(rustdoc::missing_doc_code_examples)]
 
 mod serialization;
 
