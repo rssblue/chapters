@@ -134,7 +134,7 @@ struct PodcastNamespaceChapter {
     )]
     url: Option<url::Url>,
     /// If this property is present and set to false, this chapter should not display visibly to the user in either the table of contents or as a jump-to point in the user interface.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     toc: Option<bool>,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
@@ -189,6 +189,12 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 ///        ..Default::default()
 ///    },
 ///    Chapter {
+///        start: Duration::minutes(1)+Duration::seconds(5),
+///        title: Some("Hidden chapter".to_string()),
+///        hidden: true,
+///        ..Default::default()
+///    },
+///    Chapter {
 ///        start: Duration::minutes(2)+Duration::seconds(10)+Duration::milliseconds(500),
 ///        title: Some("Chapter 3".to_string()),
 ///        image: Some(Image::Url("https://example.com/image.png".parse().unwrap())),
@@ -203,20 +209,22 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 ///   "chapters": [
 ///     {
 ///       "startTime": 0.0,
-///       "title": "Chapter 1",
-///       "toc": true
+///       "title": "Chapter 1"
 ///     },
 ///     {
 ///       "startTime": 45.0,
 ///       "title": "Chapter 2",
-///       "url": "https://example.com/",
-///       "toc": true
+///       "url": "https://example.com/"
+///     },
+///     {
+///       "startTime": 65.0,
+///       "title": "Hidden chapter",
+///       "toc": false
 ///     },
 ///     {
 ///       "startTime": 130.5,
 ///       "title": "Chapter 3",
-///       "img": "https://example.com/image.png",
-///       "toc": true
+///       "img": "https://example.com/image.png"
 ///     }
 ///   ]
 /// }"#);
@@ -239,7 +247,7 @@ pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
                     Some(link) => Some(link.url.clone()),
                     None => None,
                 },
-                toc: Some(!c.hidden),
+                toc: if c.hidden { Some(false) } else { None },
             })
             .collect(),
     };
