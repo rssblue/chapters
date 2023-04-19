@@ -140,6 +140,25 @@ struct PodcastNamespaceChapter {
     // pub location: Option<()>,
 }
 
+impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
+    fn from(chapter: &'a Chapter) -> Self {
+        Self {
+            start_time: chapter.start,
+            end_time: chapter.end,
+            title: chapter.title.clone(),
+            img: match &chapter.image {
+                Some(Image::Url(url)) => Some(url.clone()),
+                _ => None,
+            },
+            url: match &chapter.link {
+                Some(link) => Some(link.url.clone()),
+                None => None,
+            },
+            toc: if chapter.hidden { Some(false) } else { None },
+        }
+    }
+}
+
 /// Extracts [chapters](crate::Chapter) from a [JSON chapters file](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 ///
 /// # Example:
@@ -233,23 +252,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
     let podcast_namespace_chapters = PodcastNamespaceChapters {
         version: "1.2".to_string(),
-        chapters: chapters
-            .iter()
-            .map(|c| PodcastNamespaceChapter {
-                start_time: c.start,
-                end_time: c.end,
-                title: c.title.clone(),
-                img: match &c.image {
-                    Some(Image::Url(url)) => Some(url.clone()),
-                    _ => None,
-                },
-                url: match &c.link {
-                    Some(link) => Some(link.url.clone()),
-                    None => None,
-                },
-                toc: if c.hidden { Some(false) } else { None },
-            })
-            .collect(),
+        chapters: chapters.into_iter().map(|c| c.into()).collect(),
     };
     serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
 }
