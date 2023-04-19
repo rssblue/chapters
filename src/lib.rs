@@ -525,10 +525,14 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
 }
 
 /// Writes [chapters](crate::Chapter) to MP3 file's ID3 tag frames.
+///
+/// If the file already has chapters, they will be replaced.
+///
 /// # Example:
 /// ```rust
 /// # use chapters::{Chapter, Link};
 /// # use chrono::Duration;
+/// # use pretty_assertions::assert_eq;
 /// #
 /// # fn main() {
 /// # let src_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3";
@@ -577,7 +581,10 @@ pub fn to_mp3_file<P: AsRef<Path>>(
     std::fs::copy(&src_path, &dst_path).map_err(|e| format!("Failed to copy file: {}", e))?;
 
     let mut tag = match Tag::read_from_path(&src_path) {
-        Ok(tag) => tag,
+        Ok(mut tag) => {
+            tag.remove_all_chapters();
+            tag
+        }
         Err(Error {
             kind: ErrorKind::NoTag,
             ..
