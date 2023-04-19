@@ -1,6 +1,6 @@
 [package]
 authors = ["RSS Blue", "Dovydas Joksas"]
-categories = ["parsing", "multimedia::audio"]
+categories = ["parsing", "multimedia::audio", "encoding"]
 description = "Manage podcast chapters in Rust"
 edition = "2021"
 keywords = ["podcast"]
@@ -8,7 +8,7 @@ license = "MIT OR Apache-2.0"
 name = "chapters"
 readme = "README.md"
 repository = "https://github.com/rssblue/chapters"
-version = "0.2.2"
+version = "0.3.0"
 
 [dependencies]
 chrono = "0.4.24"
