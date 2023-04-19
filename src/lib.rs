@@ -161,14 +161,81 @@ impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
 ///
 /// # Example:
 /// ```rust
+/// # use chapters::{Chapter, Image, Link};
+/// # use chrono::Duration;
+/// # use pretty_assertions::assert_eq;
+/// #
 /// # fn main() {
-/// # let filepath = "tests/data/podcast-namespace-chapters.github-example.json";
-/// let file = std::fs::File::open(filepath).expect("Failed to open file");
+/// let json = r#"{
+///   "version": "1.2.0",
+///   "chapters": [
+///     {
+///       "startTime": 0,
+///       "endTime": 30.5,
+///       "title": "Chapter 1",
+///       "img": "https://example.com/chapter-1.jpg",
+///       "url": "https://example.com/chapter-1"
+///     },
+///     {
+///       "startTime": 30.5,
+///       "title": "Chapter 2"
+///     },
+///     {
+///       "startTime": 55,
+///       "title": "Hidden chapter",
+///       "toc": false
+///     },
+///     {
+///       "startTime": 60,
+///       "endTime": 90,
+///       "title": "Chapter 3",
+///       "img": "https://example.com/chapter-3.jpg"
+///     }
+///   ]
+/// }"#;
 ///
-/// let reader = std::io::BufReader::new(file);
+/// let chapters = chapters::from_json(json.as_bytes()).unwrap();
 ///
-/// let chapters = chapters::from_json(reader).expect("Failed to parse chapters");
-/// println!("{:#?}", chapters);
+/// assert_eq!(
+///     chapters,
+///     vec![
+///         Chapter {
+///             start: Duration::seconds(0),
+///             end: Some(Duration::seconds(30) + Duration::milliseconds(500)),
+///             title: Some("Chapter 1".to_string()),
+///             image: Some(Image::Url(
+///                 url::Url::parse("https://example.com/chapter-1.jpg").unwrap()
+///             )),
+///             link: Some(Link {
+///                 url: url::Url::parse("https://example.com/chapter-1").unwrap(),
+///                 title: None,
+///             }),
+///             hidden: false,
+///         },
+///         Chapter {
+///             start: Duration::seconds(30) + Duration::milliseconds(500),
+///             end: None,
+///             title: Some("Chapter 2".to_string()),
+///             ..Default::default()
+///         },
+///         Chapter {
+///             start: Duration::seconds(55),
+///             end: None,
+///             title: Some("Hidden chapter".to_string()),
+///             hidden: true,
+///             ..Default::default()
+///         },
+///         Chapter {
+///             start: Duration::seconds(60),
+///             end: Some(Duration::seconds(90)),
+///             title: Some("Chapter 3".to_string()),
+///             image: Some(Image::Url(
+///                 url::Url::parse("https://example.com/chapter-3.jpg").unwrap()
+///             )),
+///             ..Default::default()
+///         },
+///     ]
+/// );
 /// # }
 /// ```
 pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
@@ -222,7 +289,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 /// let json_chapters = chapters::to_json(&chapters).expect("Failed to serialize chapters");
 ///
 /// assert_eq!(json_chapters, r#"{
-///   "version": "1.2",
+///   "version": "1.2.0",
 ///   "chapters": [
 ///     {
 ///       "startTime": 0.0,
@@ -249,7 +316,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 /// ```
 pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
     let podcast_namespace_chapters = PodcastNamespaceChapters {
-        version: "1.2".to_string(),
+        version: "1.2.0".to_string(),
         chapters: chapters.into_iter().map(|c| c.into()).collect(),
     };
     serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
@@ -282,7 +349,7 @@ impl TimestampType {
 
     fn line_regex_pattern(&self) -> String {
         // Combines the timestamp regex pattern with space (or a punctuation mark) and a pattern for text following the timestamp.
-        format!("{}[.!?\\- ](?P<text>.+)$", self.regex_pattern())
+        format!("{}[.!?\\- ]+(?P<text>.+)$", self.regex_pattern())
     }
 
     fn from_line(line: &str) -> Option<Self> {
@@ -324,7 +391,9 @@ impl TimestampType {
 /// "#;
 ///
 /// let chapters = chapters::from_description(description).expect("Failed to parse chapters");
+///
 /// assert_eq!(chapters.len(), 3);
+/// assert_eq!(chapters[1].title, Some(String::from("Baboons")));
 /// # }
 /// ```
 pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
@@ -470,11 +539,71 @@ fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> S
 ///
 /// # Example:
 /// ```rust
+/// # use chapters::{Chapter, Link};
+/// # use pretty_assertions::assert_eq;
+/// #
 /// # fn main() {
-/// # let filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.mp3";
-/// # let filepath = std::path::Path::new(&filepath_str);
-/// let chapters = chapters::from_mp3_file(filepath).expect("Failed to parse chapters");
-/// println!("{:#?}", chapters);
+/// #     struct Test {
+/// #         file_path: &'static str,
+/// #         expected_chapters: Vec<Chapter>,
+/// #     }
+/// #
+/// #     let tests = vec![
+/// #         Test {
+/// #         file_path: "tests/data/id3-chapters.jfk-rice-university-speech.mp3",
+/// #         expected_chapters: vec![
+/// #             Chapter {
+/// #                 start: chrono::Duration::seconds(0),
+/// #                 title: Some(String::from("Introduction")),
+/// #                 ..Default::default()
+/// #             },
+/// #             Chapter {
+/// #                 start: chrono::Duration::seconds(9),
+/// #                 title: Some(String::from("Thanks")),
+/// #                 ..Default::default()
+/// #             },
+/// #             Chapter {
+/// #                 start: chrono::Duration::seconds(42),
+/// #                 title: Some(String::from("Status quo")),
+/// #                 ..Default::default()
+/// #             },
+/// #             Chapter {
+/// #                 start: chrono::Duration::minutes(5) + chrono::Duration::seconds(8),
+/// #                 title: Some(String::from("On being first")),
+/// #                 link: Some(Link{
+/// #                     url: url::Url::parse("https://www.osti.gov/opennet/manhattan-project-history/Events/1945/trinity.htm").unwrap(),
+/// #                     title: Some(String::from("The Trinity Test")),
+/// #                 }),
+/// #                 ..Default::default()
+/// #             },
+/// #             Chapter {
+/// #                 start: chrono::Duration::minutes(8) + chrono::Duration::seconds(8),
+/// #                 title: Some(String::from("Why we're going to the Moon")),
+/// #                 link: Some(Link{
+/// #                     url: url::Url::parse("https://www.nasa.gov/mission_pages/apollo/missions/apollo11.html").unwrap(),
+/// #                     title: None,
+/// #                 }),
+/// #                 ..Default::default()
+/// #             },
+/// #             Chapter {
+/// #                 start: chrono::Duration::minutes(16) + chrono::Duration::seconds(24),
+/// #                 title: Some(String::from("Conclusion")),
+/// #                 ..Default::default()
+/// #             },
+/// #         ],
+/// #     },
+/// #         Test {
+/// #             file_path: "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3",
+/// #             expected_chapters: vec![],
+/// #         },
+/// #     ];
+/// #
+/// #     for test in tests {
+/// #         let path = std::path::Path::new(test.file_path);
+/// let chapters = chapters::from_mp3_file(path).expect("Failed to parse chapters");
+/// #
+/// #        assert_eq!(chapters, test.expected_chapters);
+/// #     }
 /// # }
 pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
