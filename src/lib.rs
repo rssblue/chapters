@@ -308,7 +308,7 @@ impl TimestampType {
     }
 }
 
-/// Extracts [chapters](crate::Chapter) from episode description (show notes).
+/// Extracts [chapters](crate::Chapter) from [episode description](https://help.spotifyforpodcasters.com/hc/en-us/articles/13194991130779-Enabling-podcast-chapters-) (show notes).
 ///
 /// # Example:
 /// ```rust
@@ -369,7 +369,7 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
     Ok(chapters)
 }
 
-/// Writes [chapters](crate::Chapter) to episode description (show notes).
+/// Writes [chapters](crate::Chapter) to [episode description](https://help.spotifyforpodcasters.com/hc/en-us/articles/13194991130779-Enabling-podcast-chapters-) (show notes).
 ///
 /// Only the start time and title are used.
 ///
@@ -466,7 +466,7 @@ fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> S
     }
 }
 
-/// Extracts [chapters](crate::Chapter) from MP3 file's ID3 tag frames.
+/// Extracts [chapters](crate::Chapter) from MP3 file's [ID3](https://en.wikipedia.org/wiki/ID3) tag frames.
 ///
 /// # Example:
 /// ```rust
@@ -534,7 +534,7 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
     Ok(chapters)
 }
 
-/// Writes [chapters](crate::Chapter) to MP3 file's ID3 tag frames.
+/// Writes [chapters](crate::Chapter) to MP3 file's [ID3](https://en.wikipedia.org/wiki/ID3) tag frames.
 ///
 /// If the file already has chapters, they will be replaced.
 ///
