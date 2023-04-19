@@ -535,10 +535,24 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
 /// # use pretty_assertions::assert_eq;
 /// #
 /// # fn main() {
-/// # let src_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3";
-/// # let src_filepath = std::path::Path::new(&src_filepath_str);
-/// # let dst_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.frames-added.mp3";
-/// # let dst_filepath = std::path::Path::new(&dst_filepath_str);
+/// #     let dst_filepath_str = "tests/data/id3-chapters.jfk-rice-university-speech.frames-added.mp3";
+/// #     let dst_filepath = std::path::Path::new(&dst_filepath_str);
+/// #
+/// #     struct Test {
+/// #         src_filepath_str: &'static str,
+/// #     }
+/// #
+/// #     let tests = vec![
+/// #         Test {
+/// #             src_filepath_str: "tests/data/id3-chapters.jfk-rice-university-speech.mp3",
+/// #         },
+/// #         Test {
+/// #             src_filepath_str: "tests/data/id3-chapters.jfk-rice-university-speech.no-frames.mp3",
+/// #         },
+/// #     ];
+/// #
+/// #     for test in tests {
+/// #         let src_filepath = std::path::Path::new(&test.src_filepath_str);
 /// let chapters = vec![
 ///     Chapter {
 ///         start: Duration::seconds(0),
@@ -563,14 +577,16 @@ pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
 ///         }),
 ///         ..Default::default()
 ///     },
-///     ];
-/// chapters::to_mp3_file(src_filepath, dst_filepath, &chapters).expect("Failed to write chapters");
+/// ];
 ///
-/// let chapters_read = chapters::from_mp3_file(dst_filepath).expect("Failed to read chapters");
-/// assert_eq!(chapters, chapters_read);
+/// chapters::to_mp3_file(src_filepath, dst_filepath, &chapters).expect("Failed to write chapters");
 /// #
-/// # // Cleanup
-/// # std::fs::remove_file(dst_filepath).unwrap();
+/// #         let chapters_read = chapters::from_mp3_file(dst_filepath).expect("Failed to read chapters");
+///           # assert_eq!(chapters, chapters_read);
+/// #
+/// #         // Cleanup
+/// #         std::fs::remove_file(dst_filepath).unwrap();
+/// #     }
 /// # }
 /// ```
 pub fn to_mp3_file<P: AsRef<Path>>(
