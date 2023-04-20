@@ -606,7 +606,13 @@ fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> S
 /// #     }
 /// # }
 pub fn from_mp3_file<P: AsRef<Path>>(path: P) -> Result<Vec<Chapter>, String> {
-    let tag = Tag::read_from_path(path).map_err(|e| format!("Error reading ID3 tag: {}", e))?;
+    let tag = Tag::read_from_path(&path).map_err(|e| {
+        format!(
+            "Error reading ID3 tag from `{}`: {}",
+            path.as_ref().display(),
+            e
+        )
+    })?;
     let mut chapters = Vec::new();
 
     for id3_chapter in tag.chapters() {
@@ -733,7 +739,14 @@ pub fn to_mp3_file<P: AsRef<Path>>(
     dst_path: P,
     chapters: &[Chapter],
 ) -> Result<(), String> {
-    std::fs::copy(&src_path, &dst_path).map_err(|e| format!("Failed to copy file: {}", e))?;
+    std::fs::copy(&src_path, &dst_path).map_err(|e| {
+        format!(
+            "Error copying `{}` to `{}`: {}",
+            src_path.as_ref().display(),
+            dst_path.as_ref().display(),
+            e
+        )
+    })?;
 
     let mut tag = match Tag::read_from_path(&src_path) {
         Ok(mut tag) => {
@@ -744,7 +757,13 @@ pub fn to_mp3_file<P: AsRef<Path>>(
             kind: ErrorKind::NoTag,
             ..
         }) => Tag::new(),
-        Err(err) => return Err(format!("Error reading ID3 tag: {}", err)),
+        Err(err) => {
+            return Err(format!(
+                "Error reading ID3 tag from `{}`: {}",
+                src_path.as_ref().display(),
+                err
+            ))
+        }
     };
 
     for (i, chapter) in chapters.iter().enumerate() {
@@ -785,8 +804,13 @@ pub fn to_mp3_file<P: AsRef<Path>>(
         ));
     }
 
-    tag.write_to_path(&dst_path, Version::Id3v24)
-        .map_err(|e| format!("Error writing ID3 tag: {}", e))?;
+    tag.write_to_path(&dst_path, Version::Id3v24).map_err(|e| {
+        format!(
+            "Error writing ID3  tag to `{}`: {}",
+            dst_path.as_ref().display(),
+            e
+        )
+    })?;
 
     Ok(())
 }
