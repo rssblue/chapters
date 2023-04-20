@@ -24,6 +24,9 @@ jobs:
     - name: Rust cache
       uses: Swatinem/rust-cache@v1.3.0
 
+    - name: Check code formatting
+      run: cargo fmt --all -- --check
+
     - name: Check with Clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
       
