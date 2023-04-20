@@ -75,14 +75,10 @@ impl From<PodcastNamespaceChapter> for Chapter {
             start: podcast_namespace_chapter.start_time,
             end: podcast_namespace_chapter.end_time,
             title: podcast_namespace_chapter.title,
-            image: match podcast_namespace_chapter.img {
-                Some(url) => Some(Image::Url(url)),
-                None => None,
-            },
-            link: match podcast_namespace_chapter.url {
-                Some(url) => Some(Link { url, title: None }),
-                None => None,
-            },
+            image: podcast_namespace_chapter.img.map(Image::Url),
+            link: podcast_namespace_chapter
+                .url
+                .map(|url| Link { url, title: None }),
             hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
         }
     }
@@ -148,10 +144,7 @@ impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
                 Some(Image::Url(url)) => Some(url.clone()),
                 _ => None,
             },
-            url: match &chapter.link {
-                Some(link) => Some(link.url.clone()),
-                None => None,
-            },
+            url: chapter.link.as_ref().map(|link| link.url.clone()),
             toc: if chapter.hidden { Some(false) } else { None },
         }
     }
@@ -317,7 +310,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
     let podcast_namespace_chapters = PodcastNamespaceChapters {
         version: "1.2.0".to_string(),
-        chapters: chapters.into_iter().map(|c| c.into()).collect(),
+        chapters: chapters.iter().map(|c| c.into()).collect(),
     };
     serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
 }
@@ -326,22 +319,22 @@ pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
 #[derive(Debug, Clone)]
 enum TimestampType {
     /// MM:SS format, e.g., "12:34"
-    MMSS,
+    MmSs,
     /// HH:MM:SS format, e.g., "01:23:45"
-    HHMMSS,
+    HhMmSs,
     /// MM:SS format within parentheses, e.g., "(12:34)"
-    MMSSParentheses,
+    MmSsParentheses,
     /// HH:MM:SS format within parentheses, e.g., "(01:23:45)"
-    HHMMSSParentheses,
+    HhMmSsParentheses,
 }
 
 impl TimestampType {
     fn regex_pattern(&self) -> &str {
         match self {
-            Self::MMSS => r"^(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
-            Self::HHMMSS => r"^(?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
-            Self::MMSSParentheses => r"^\((?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)",
-            Self::HHMMSSParentheses => {
+            Self::MmSs => r"^(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
+            Self::HhMmSs => r"^(?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)",
+            Self::MmSsParentheses => r"^\((?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)",
+            Self::HhMmSsParentheses => {
                 r"^\((?P<hours>\d{2}):(?P<minutes>[0-5]\d):(?P<seconds>[0-5]\d)\)"
             }
         }
@@ -357,10 +350,10 @@ impl TimestampType {
             // regex can be expensive, so we first check if the line at least starts with the right character.
             if first_char == '(' || first_char.is_numeric() {
                 return [
-                    Self::MMSS,
-                    Self::HHMMSS,
-                    Self::MMSSParentheses,
-                    Self::HHMMSSParentheses,
+                    Self::MmSs,
+                    Self::HhMmSs,
+                    Self::MmSsParentheses,
+                    Self::HhMmSsParentheses,
                 ]
                 .iter()
                 .find(|&temp_timestamp_type| {
@@ -488,9 +481,9 @@ pub fn to_description(chapters: &[Chapter]) -> Result<String, String> {
         .iter()
         .any(|chapter| chapter.start >= Duration::hours(1));
     let timestamp_type = if at_least_an_hour {
-        TimestampType::HHMMSS
+        TimestampType::HhMmSs
     } else {
-        TimestampType::MMSS
+        TimestampType::MmSs
     };
 
     for chapter in chapters {
@@ -502,7 +495,7 @@ pub fn to_description(chapters: &[Chapter]) -> Result<String, String> {
             title
         );
         description.push_str(&line);
-        description.push_str("\n");
+        description.push('\n');
     }
 
     Ok(description)
@@ -528,10 +521,10 @@ fn duration_to_timestamp(duration: Duration, timestamp_type: TimestampType) -> S
     let seconds = duration.num_seconds() - minutes * 60 - hours * 3600;
 
     match timestamp_type {
-        TimestampType::MMSS => format!("{:02}:{:02}", minutes, seconds),
-        TimestampType::HHMMSS => format!("{:02}:{:02}:{:02}", hours, minutes, seconds),
-        TimestampType::MMSSParentheses => format!("({:02}:{:02})", minutes, seconds),
-        TimestampType::HHMMSSParentheses => format!("({:02}:{:02}:{:02})", hours, minutes, seconds),
+        TimestampType::MmSs => format!("{minutes:02}:{seconds:02}"),
+        TimestampType::HhMmSs => format!("{hours:02}:{minutes:02}:{seconds:02}"),
+        TimestampType::MmSsParentheses => format!("({minutes:02}:{seconds:02})"),
+        TimestampType::HhMmSsParentheses => format!("({hours:02}:{minutes:02}:{seconds:02})"),
     }
 }
 
