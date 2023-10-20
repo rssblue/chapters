@@ -1,4 +1,4 @@
-use chapters::{from_json, Chapter, Image, Link};
+use chapters::{from_json, Chapter, Image, Link, RemoteEntity};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -164,6 +164,10 @@ fn test_to_json() {
                 url::Url::parse("https://example.com/image.png").unwrap(),
             )),
             hidden: false,
+            remote_entity: Some(RemoteEntity::Item {
+                feed_guid: uuid::Uuid::parse_str("917393e3-1b1e-5cef-ace4-edaa54e1f810").unwrap(),
+                guid: String::from("44a78abc-dffe-4de2-9230-6d6e723360a5"),
+            }),
         },
         Chapter {
             start: chrono::Duration::seconds(10),
@@ -172,6 +176,7 @@ fn test_to_json() {
             link: None,
             image: None,
             hidden: false,
+            remote_entity: None,
         },
     ];
 
@@ -192,7 +197,13 @@ fn test_to_json() {
       "url": "https://example.com/",
       "title": "Example"
     },
-    "hidden": false
+    "hidden": false,
+    "remote_entity": {
+      "item": {
+        "feed_guid": "917393e3-1b1e-5cef-ace4-edaa54e1f810",
+        "guid": "44a78abc-dffe-4de2-9230-6d6e723360a5"
+      }
+    }
   },
   {
     "start": 10.0,

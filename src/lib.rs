@@ -8,6 +8,7 @@ use chrono::Duration;
 use id3::{Error, ErrorKind, Tag, TagLike, Version};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use uuid::Uuid;
 
 /// Represents a web link for the [chapter](crate::Chapter).
 #[derive(Debug, PartialEq, Serialize)]
@@ -27,6 +28,27 @@ pub enum Image {
     Url(url::Url),
     // TODO: some ways of encoding chapters (e.g., ID3 tags in MP3 files) allow to embed images directly in the file.
     // Data(Vec<u8>),
+}
+
+/// Represents a remote item as defined in the [Podcast namespace
+/// specification](https://podcastindex.org/namespace/1.0#remote-item). Used internally by RSS
+/// Blue.
+#[derive(Debug, PartialEq, Serialize)]
+pub enum RemoteEntity {
+    /// Represents a podcast feed.
+    #[serde(rename = "feed")]
+    Feed {
+        /// [Podcast GUID](https://podcastindex.org/namespace/1.0#guid)
+        guid: Uuid,
+    },
+    /// Represents a podcast item.
+    #[serde(rename = "item")]
+    Item {
+        /// [Podcast GUID](https://podcastindex.org/namespace/1.0#guid)
+        feed_guid: Uuid,
+        /// Item GUID, see <https://www.rssboard.org/rss-specification>.
+        guid: String,
+    },
 }
 
 /// Chapters follow mostly the [Podcast namespace specification](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
@@ -54,6 +76,9 @@ pub struct Chapter {
     pub hidden: bool,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
+    /// Remote entity used internally by RSS Blue.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote_entity: Option<RemoteEntity>,
 }
 
 impl Default for Chapter {
@@ -65,6 +90,7 @@ impl Default for Chapter {
             image: None,
             link: None,
             hidden: false,
+            remote_entity: None,
         }
     }
 }
@@ -80,6 +106,7 @@ impl From<PodcastNamespaceChapter> for Chapter {
                 .url
                 .map(|url| Link { url, title: None }),
             hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
+            remote_entity: None,
         }
     }
 }
@@ -203,7 +230,7 @@ impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
 ///                 url: url::Url::parse("https://example.com/chapter-1").unwrap(),
 ///                 title: None,
 ///             }),
-///             hidden: false,
+///             ..Default::default()
 ///         },
 ///         Chapter {
 ///             start: Duration::seconds(30) + Duration::milliseconds(500),
@@ -408,6 +435,7 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
                 image: None,
                 link: None,
                 hidden: false,
+                remote_entity: None,
             })
         } else {
             None
