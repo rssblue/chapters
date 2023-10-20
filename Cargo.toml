@@ -10,6 +10,9 @@ readme = "README.md"
 repository = "https://github.com/rssblue/chapters"
 version = "0.3.2"
 
+[features]
+rssblue = ["dep:uuid"]
+
 [dependencies]
 chrono = "0.4.31"
 id3 = "1.8.0"
@@ -17,7 +20,8 @@ regex = "1.10.2"
 serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.107"
 url = "2.4.1"
-uuid = {version="1.5.0", features=["serde", "v4"]}
+uuid = { version="1.5.0", features=["serde", "v4"], optional=true }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
+cfg-if = "1.0.0"

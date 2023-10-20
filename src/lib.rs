@@ -8,6 +8,7 @@ use chrono::Duration;
 use id3::{Error, ErrorKind, Tag, TagLike, Version};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+#[cfg(feature = "rssblue")]
 use uuid::Uuid;
 
 /// Represents a web link for the [chapter](crate::Chapter).
@@ -33,6 +34,7 @@ pub enum Image {
 /// Represents a remote item as defined in the [Podcast namespace
 /// specification](https://podcastindex.org/namespace/1.0#remote-item). Used internally by RSS
 /// Blue.
+#[cfg(feature = "rssblue")]
 #[derive(Debug, PartialEq, Serialize)]
 pub enum RemoteEntity {
     /// Represents a podcast feed.
@@ -78,6 +80,7 @@ pub struct Chapter {
     // pub location: Option<()>,
     /// Remote entity used internally by RSS Blue.
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg(feature = "rssblue")]
     pub remote_entity: Option<RemoteEntity>,
 }
 
@@ -90,6 +93,7 @@ impl Default for Chapter {
             image: None,
             link: None,
             hidden: false,
+            #[cfg(feature = "rssblue")]
             remote_entity: None,
         }
     }
@@ -106,6 +110,7 @@ impl From<PodcastNamespaceChapter> for Chapter {
                 .url
                 .map(|url| Link { url, title: None }),
             hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
+            #[cfg(feature = "rssblue")]
             remote_entity: None,
         }
     }
@@ -435,6 +440,7 @@ pub fn from_description(description: &str) -> Result<Vec<Chapter>, String> {
                 image: None,
                 link: None,
                 hidden: false,
+                #[cfg(feature = "rssblue")]
                 remote_entity: None,
             })
         } else {

@@ -1,4 +1,7 @@
-use chapters::{from_json, Chapter, Image, Link, RemoteEntity};
+use cfg_if::cfg_if;
+#[cfg(feature = "rssblue")]
+use chapters::RemoteEntity;
+use chapters::{from_json, Chapter, Image, Link};
 use pretty_assertions::assert_eq;
 
 #[test]
@@ -164,6 +167,7 @@ fn test_to_json() {
                 url::Url::parse("https://example.com/image.png").unwrap(),
             )),
             hidden: false,
+            #[cfg(feature = "rssblue")]
             remote_entity: Some(RemoteEntity::Item {
                 feed_guid: uuid::Uuid::parse_str("917393e3-1b1e-5cef-ace4-edaa54e1f810").unwrap(),
                 guid: String::from("44a78abc-dffe-4de2-9230-6d6e723360a5"),
@@ -176,6 +180,7 @@ fn test_to_json() {
             link: None,
             image: None,
             hidden: false,
+            #[cfg(feature = "rssblue")]
             remote_entity: None,
         },
     ];
@@ -183,9 +188,8 @@ fn test_to_json() {
     // ensure indentation
     let result = serde_json::to_string_pretty(&chapters).unwrap();
 
-    assert_eq!(
-        result,
-        r#"[
+    cfg_if! { if #[cfg( feature = "rssblue" )]{
+    let expected = r#"[
   {
     "start": 0.0,
     "end": 10.0,
@@ -209,6 +213,28 @@ fn test_to_json() {
     "start": 10.0,
     "hidden": false
   }
-]"#
-    );
+]"#;
+    } else {
+    let expected = r#"[
+  {
+    "start": 0.0,
+    "end": 10.0,
+    "title": "Start",
+    "image": {
+      "Url": "https://example.com/image.png"
+    },
+    "link": {
+      "url": "https://example.com/",
+      "title": "Example"
+    },
+    "hidden": false
+  },
+  {
+    "start": 10.0,
+    "hidden": false
+  }
+]"#;
+    }}
+
+    assert_eq!(result, expected);
 }
