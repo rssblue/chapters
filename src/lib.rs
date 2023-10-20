@@ -118,14 +118,24 @@ impl From<PodcastNamespaceChapter> for Chapter {
 
 /// Chapters of the [Podcast namespace](https://github.com/Podcastindex-org/podcast-namespace/blob/main/chapters/jsonChapters.md).
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
-struct PodcastNamespaceChapters {
+pub struct PodcastNamespaceChapters {
     version: String,
     chapters: Vec<PodcastNamespaceChapter>,
 }
 
+impl From<&[Chapter]> for PodcastNamespaceChapters {
+    fn from(chapters: &[Chapter]) -> Self {
+        Self {
+            version: "1.2.0".to_string(),
+            chapters: chapters.iter().map(|c| c.into()).collect(),
+        }
+    }
+}
+
+/// Individual chapter inside [Chapters](crate::PodcastNamespaceChapters).
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct PodcastNamespaceChapter {
+pub struct PodcastNamespaceChapter {
     /// The starting time of the chapter.
     #[serde(
         deserialize_with = "serialization::float_to_duration",
@@ -349,10 +359,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 /// # }
 /// ```
 pub fn to_json(chapters: &[Chapter]) -> Result<String, String> {
-    let podcast_namespace_chapters = PodcastNamespaceChapters {
-        version: "1.2.0".to_string(),
-        chapters: chapters.iter().map(|c| c.into()).collect(),
-    };
+    let podcast_namespace_chapters: PodcastNamespaceChapters = chapters.into();
     serde_json::to_string_pretty(&podcast_namespace_chapters).map_err(|e| e.to_string())
 }
 
