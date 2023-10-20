@@ -52,7 +52,12 @@ pub fn duration_to_float<S>(duration: &Duration, serializer: S) -> Result<S::Ok,
 where
     S: serde::Serializer,
 {
-    serializer.serialize_f64(duration.num_milliseconds() as f64 / 1000.0)
+    // If float ends in .0 or doesn't even have a decimal point, serialize as an integer.
+    let float = duration.num_milliseconds() as f64 / 1000.0;
+    if float.fract() == 0.0 {
+        return serializer.serialize_i64(float as i64);
+    }
+    serializer.serialize_f64(float)
 }
 
 pub fn string_to_url<'de, D>(deserializer: D) -> Result<Option<url::Url>, D::Error>

@@ -35,7 +35,7 @@ pub enum Image {
 /// specification](https://podcastindex.org/namespace/1.0#remote-item). Used internally by RSS
 /// Blue.
 #[cfg(feature = "rssblue")]
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum RemoteEntity {
     /// Represents a podcast feed.
     #[serde(rename = "feed")]
@@ -111,7 +111,7 @@ impl From<PodcastNamespaceChapter> for Chapter {
                 .map(|url| Link { url, title: None }),
             hidden: !podcast_namespace_chapter.toc.unwrap_or(true),
             #[cfg(feature = "rssblue")]
-            remote_entity: None,
+            remote_entity: podcast_namespace_chapter.remote_entity,
         }
     }
 }
@@ -164,6 +164,13 @@ struct PodcastNamespaceChapter {
     toc: Option<bool>,
     // TODO: This object defines an optional location that is tied to this chapter.
     // pub location: Option<()>,
+    #[cfg(feature = "rssblue")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        rename = "rssblue:remoteEntity"
+    )]
+    remote_entity: Option<RemoteEntity>,
 }
 
 impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
@@ -178,6 +185,8 @@ impl<'a> From<&'a Chapter> for PodcastNamespaceChapter {
             },
             url: chapter.link.as_ref().map(|link| link.url.clone()),
             toc: if chapter.hidden { Some(false) } else { None },
+            #[cfg(feature = "rssblue")]
+            remote_entity: chapter.remote_entity.clone(),
         }
     }
 }
@@ -289,7 +298,7 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 ///        ..Default::default()
 ///    },
 ///    Chapter {
-///        start: Duration::seconds(45),
+///        start: Duration::seconds(45) + Duration::milliseconds(900),
 ///        title: Some("Chapter 2".to_string()),
 ///        link: Some(Link {
 ///            url: "https://example.com".parse().unwrap(),
@@ -317,16 +326,16 @@ pub fn from_json<R: std::io::Read>(reader: R) -> Result<Vec<Chapter>, String> {
 ///   "version": "1.2.0",
 ///   "chapters": [
 ///     {
-///       "startTime": 0.0,
+///       "startTime": 0,
 ///       "title": "Chapter 1"
 ///     },
 ///     {
-///       "startTime": 45.0,
+///       "startTime": 45.9,
 ///       "title": "Chapter 2",
 ///       "url": "https://example.com/"
 ///     },
 ///     {
-///       "startTime": 65.0,
+///       "startTime": 65,
 ///       "title": "Hidden chapter",
 ///       "toc": false
 ///     },

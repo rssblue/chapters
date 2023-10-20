@@ -28,7 +28,13 @@
     {
       "startTime": 4600,
       "title": "Donations",
-      "url": "https://example.com/paypal_link"
+      "url": "https://example.com/paypal_link",
+      "rssblue:remoteEntity": {
+        "item": {
+          "feed_guid": "917393e3-1b1e-5cef-ace4-edaa54e1f810",
+          "guid": "44a78abc-dffe-4de2-9230-6d6e723360a5"
+        }
+      }
     },
     {
       "startTime": 5510,
