@@ -169,7 +169,7 @@ fn test_json() {
     ];
 
     for test in tests {
-        if let Some(expected) = test.expected.as_ref().ok() {
+        if let Ok(expected) = test.expected.as_ref() {
             let serialized = chapters::to_json(expected).unwrap();
             assert_eq!(serialized.trim(), test.file_contents.trim());
         }
